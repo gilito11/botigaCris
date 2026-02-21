@@ -700,6 +700,7 @@ function initVoice() {
     const display = final || interim;
     document.getElementById('voiceText').textContent = display;
     if (final) {
+      recognition.stop();
       processVoiceCommand(final.trim().toLowerCase());
     }
   };
