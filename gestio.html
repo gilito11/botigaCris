@@ -889,34 +889,40 @@ function parseNumberWord(text) {
 }
 
 function extractQuantity(text) {
-  // Define quantityZone first - text before "caduca" to avoid confusing date numbers
+  // Define quantityZone first - text before expiry keywords to avoid confusing date numbers
   let quantityZone = text;
-  const caducaIdx = text.indexOf('caduca');
-  if (caducaIdx > -1) quantityZone = text.substring(0, caducaIdx);
+  const caducaMatch = text.match(/\b(?:caduca|caduqui|caducitat)\b/);
+  if (caducaMatch) quantityZone = text.substring(0, caducaMatch.index);
+
+  // Remove weight measures from quantityZone so "cinc-cents grams" isn't read as qty 500
+  let qzClean = quantityZone.replace(/\b\d+\s*(?:g|kg|ml|l|cl|grams?|litres?|quilos?)\b/gi, '');
+  // Also remove Catalan number words followed by weight words
+  const weightWords = /(?:cinc-cents|quatre-cents|tres-cents|dos-cents|cent|mil)\s+(?:grams?|quilos?|litres?|mil·lilitres?)\b/gi;
+  qzClean = qzClean.replace(weightWords, '');
 
   // Check for "una"/"un" as quantity word early (common in speech)
-  if (/\buna\b/i.test(quantityZone) || /^(?:afegeix|treu|actualitza)\s+un\b/i.test(text)) return 1;
+  if (/\buna\b/i.test(qzClean) || /^(?:afegeix|treu|actualitza)\s+un\b/i.test(text)) return 1;
 
   // Look for explicit quantity patterns (number + "unitats"/"unitat")
-  const explicitQty = quantityZone.match(/(\d+)\s*unitat/i);
+  const explicitQty = qzClean.match(/(\d+)\s*unitat/i);
   if (explicitQty) return parseInt(explicitQty[1]);
 
-  // Look for standalone numbers that are NOT part of product names (exclude numbers followed by g/kg/ml/l/cl)
-  const standaloneNum = quantityZone.match(/\b(\d+)\b(?!\s*(?:g|kg|ml|l|cl)\b)/i);
+  // Look for standalone numbers NOT followed by weight units
+  const standaloneNum = qzClean.match(/\b(\d+)\b(?!\s*(?:g|kg|ml|l|cl|grams?)\b)/i);
   if (standaloneNum) return parseInt(standaloneNum[1]);
 
-  // Try Catalan number words before "unitat(s)"
+  // Try Catalan number words + "unitat(s)"
   const unitatPattern = /([\w\s-]+?)\s*unitat/i;
-  const um = quantityZone.match(unitatPattern);
+  const um = qzClean.match(unitatPattern);
   if (um) {
     const num = parseNumberWord(um[1]);
     if (num !== null) return num;
   }
 
-  // Sort by value descending to match longer phrases first (e.g., "vint-i-cinc" before "cinc")
+  // Try any Catalan number word (longest first to match compound numbers first)
   const sortedEntries = Object.entries(CATALAN_NUMBERS).sort((a, b) => b[0].length - a[0].length);
   for (const [word, num] of sortedEntries) {
-    if (quantityZone.includes(word) && num > 0) return num;
+    if (qzClean.includes(word) && num > 0) return num;
   }
 
   return 1; // default
@@ -924,7 +930,7 @@ function extractQuantity(text) {
 
 function extractExpiry(text) {
   // Look for "caduca el X de Y" or "caducitat X de Y"
-  const expiryPattern = /(?:que\s+)?(?:caduca|caducitat)\s+(?:el\s+|l')?(.+)/i;
+  const expiryPattern = /(?:que\s+)?(?:caduca|caduqui|caducitat)\s+(?:el\s+|l')?(.+)/i;
   const m = text.match(expiryPattern);
   if (!m) return '';
 
@@ -963,8 +969,8 @@ function parseCatalanDate(text) {
   if (yearDigit) {
     year = parseInt(yearDigit[1]);
   } else {
-    // Try "dos mil vint-i-set" style years
-    const yearPattern = /(?:dos\s*mil\s*)([\w\s-]+)/;
+    // Try "dos mil vint-i-set" or "del dos mil vint-i-set" style years
+    const yearPattern = /(?:del?\s+)?(?:dos\s*mil\s*)([\w\s-]+)/;
     const ym = text.match(yearPattern);
     if (ym) {
       const yearRest = parseNumberWord(ym[1]);
@@ -1016,8 +1022,8 @@ function extractProductName(text) {
     cleaned = cleaned.replace(re, '');
   }
 
-  // Remove expiry phrases (with optional "que" before)
-  cleaned = cleaned.replace(/(?:que\s+)?(?:caduca|caducitat)\s+.*/i, '');
+  // Remove expiry phrases (with optional "que" before, and "caduqui" variant)
+  cleaned = cleaned.replace(/(?:que\s+)?(?:caduca|caduqui|caducitat)\s+.*/i, '');
 
   // Remove category mentions at the end
   cleaned = cleaned.replace(/\s+(?:categoria|de la categoria)\s+\w+\s*$/i, '');
