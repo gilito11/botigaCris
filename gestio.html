@@ -29,6 +29,25 @@ tailwind.config = {
   .card-product { transition: transform 0.1s; }
   .card-product:active { transform: scale(0.97); }
   .fab { position: fixed; bottom: 28px; right: 20px; width: 68px; height: 68px; border-radius: 50%; font-size: 36px; z-index: 40; box-shadow: 0 4px 16px rgba(0,0,0,0.25); }
+  .fab-mic { position: fixed; bottom: 108px; right: 20px; width: 64px; height: 64px; border-radius: 50%; z-index: 40; box-shadow: 0 4px 16px rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: center; border: 3px solid #7c3aed; background: #6d28d9; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
+  .fab-mic:active { transform: scale(0.9); }
+  .fab-mic svg { width: 32px; height: 32px; fill: white; }
+  .fab-mic.listening { animation: micPulse 1s ease-in-out infinite; background: #dc2626; border-color: #ef4444; }
+  .fab-mic.processing { background: #6d28d9; border-color: #7c3aed; }
+  .fab-mic.processing svg { animation: micSpin 0.8s linear infinite; }
+  .fab-mic.success { background: #16a34a; border-color: #22c55e; }
+  .fab-mic.error { background: #dc2626; border-color: #ef4444; }
+  @keyframes micPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,0.5), 0 4px 16px rgba(0,0,0,0.25); } 50% { box-shadow: 0 0 0 14px rgba(220,38,38,0), 0 4px 16px rgba(0,0,0,0.25); } }
+  @keyframes micSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  .voice-overlay { position: fixed; bottom: 0; left: 0; right: 0; z-index: 45; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); border-radius: 24px 24px 0 0; padding: 20px 20px 32px; transform: translateY(100%); transition: transform 0.3s ease-out; }
+  .voice-overlay.visible { transform: translateY(0); }
+  .voice-status { font-size: 15px; font-weight: 700; color: #a78bfa; text-align: center; margin-bottom: 8px; }
+  .voice-text { font-size: 20px; font-weight: 800; color: white; text-align: center; min-height: 30px; margin-bottom: 8px; }
+  .voice-parsed { font-size: 14px; color: #d1d5db; text-align: center; }
+  .voice-dots span { display: inline-block; width: 8px; height: 8px; margin: 0 3px; background: #a78bfa; border-radius: 50%; animation: voiceDot 1.2s infinite; }
+  .voice-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .voice-dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes voiceDot { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1.2); opacity: 1; } }
   .modal-overlay { background: rgba(0,0,0,0.45); backdrop-filter: blur(2px); }
   .slide-up { animation: slideUp 0.25s ease-out; }
   @keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
@@ -120,6 +139,22 @@ tailwind.config = {
   <div class="text-6xl mb-4">🌱</div>
   <p class="text-xl font-bold text-gray-400">Cap producte trobat</p>
   <p class="text-gray-400 mt-1">Prem el boto + per afegir-ne un</p>
+</div>
+
+<!-- FAB MIC BUTTON -->
+<button id="micFab" onclick="toggleVoice()" class="fab-mic" title="Entrada per veu">
+  <svg id="micIcon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+  <svg id="micIconStop" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="display:none"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+  <svg id="micIconCheck" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="display:none"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+  <svg id="micIconX" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="display:none"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+</button>
+
+<!-- VOICE OVERLAY -->
+<div id="voiceOverlay" class="voice-overlay">
+  <div id="voiceStatus" class="voice-status">Escoltant...</div>
+  <div id="voiceText" class="voice-text"></div>
+  <div id="voiceDots" class="voice-dots" style="text-align:center"><span></span><span></span><span></span></div>
+  <div id="voiceParsed" class="voice-parsed"></div>
 </div>
 
 <!-- FAB ADD BUTTON -->
@@ -598,6 +633,507 @@ let longPressTimer = null;
 document.addEventListener('DOMContentLoaded', () => {
   loadProducts();
   renderProducts();
+});
+
+// ==========================================
+// VOICE INPUT FEATURE
+// ==========================================
+
+const VoiceState = { IDLE: 'idle', LISTENING: 'listening', PROCESSING: 'processing', SUCCESS: 'success', ERROR: 'error' };
+let voiceState = VoiceState.IDLE;
+let recognition = null;
+let voiceSpeechSupported = false;
+
+// Number words in Catalan
+const CATALAN_NUMBERS = {
+  'zero':0,'un':1,'una':1,'dos':2,'dues':2,'tres':3,'quatre':4,'cinc':5,'sis':6,'set':7,'vuit':8,'nou':9,
+  'deu':10,'onze':11,'dotze':12,'tretze':13,'catorze':14,'quinze':15,'setze':16,'disset':17,'divuit':18,'dinou':19,
+  'vint':20,'vint-i-un':21,'vint-i-una':21,'vint-i-dos':22,'vint-i-dues':22,'vint-i-tres':23,'vint-i-quatre':24,
+  'vint-i-cinc':25,'vint-i-sis':26,'vint-i-set':27,'vint-i-vuit':28,'vint-i-nou':29,
+  'trenta':30,'quaranta':40,'cinquanta':50,'seixanta':60,'setanta':70,'vuitanta':80,'noranta':90,'cent':100,
+  'dos-cents':200,'tres-cents':300,'quatre-cents':400,'cinc-cents':500,
+  'mil':1000,'dos mil':2000
+};
+
+const CATALAN_MONTHS = {
+  'gener':1,'febrer':2,'marc':3,'març':3,'abril':4,'maig':5,'juny':6,
+  'juliol':7,'agost':8,'setembre':9,'octubre':10,'novembre':11,'desembre':12
+};
+
+const CATEGORIES = ['Alimentació','Cosmètica','Suplements','Infusions','Higiene','Altres'];
+const CATEGORY_KEYWORDS = {
+  'alimentació':'Alimentació','alimentacio':'Alimentació','menjar':'Alimentació',
+  'cosmètica':'Cosmètica','cosmetica':'Cosmètica','crema':'Cosmètica',
+  'suplements':'Suplements','suplement':'Suplements','vitamina':'Suplements',
+  'infusions':'Infusions','infusió':'Infusions','infusio':'Infusions','te':'Infusions',
+  'higiene':'Higiene','sabó':'Higiene','sabo':'Higiene',
+  'altres':'Altres'
+};
+
+function initVoice() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    document.getElementById('micFab').style.display = 'none';
+    return;
+  }
+  voiceSpeechSupported = true;
+  recognition = new SpeechRecognition();
+  recognition.lang = 'ca-ES';
+  recognition.continuous = false;
+  recognition.interimResults = true;
+  recognition.maxAlternatives = 1;
+
+  recognition.onstart = () => {
+    setVoiceState(VoiceState.LISTENING);
+  };
+
+  recognition.onresult = (event) => {
+    let interim = '';
+    let final = '';
+    for (let i = 0; i < event.results.length; i++) {
+      if (event.results[i].isFinal) {
+        final += event.results[i][0].transcript;
+      } else {
+        interim += event.results[i][0].transcript;
+      }
+    }
+    const display = final || interim;
+    document.getElementById('voiceText').textContent = display;
+    if (final) {
+      processVoiceCommand(final.trim().toLowerCase());
+    }
+  };
+
+  recognition.onerror = (event) => {
+    if (event.error === 'not-allowed') {
+      showVoiceError('Permís de micròfon denegat. Activa\'l a la configuració del navegador.');
+    } else if (event.error === 'no-speech') {
+      showVoiceError('No s\'ha detectat cap veu. Torna a provar.');
+    } else if (event.error === 'aborted') {
+      setVoiceState(VoiceState.IDLE);
+    } else {
+      showVoiceError('Error de reconeixement: ' + event.error);
+    }
+  };
+
+  recognition.onend = () => {
+    if (voiceState === VoiceState.LISTENING) {
+      setVoiceState(VoiceState.IDLE);
+      hideVoiceOverlay();
+    }
+  };
+}
+
+function toggleVoice() {
+  if (!voiceSpeechSupported) {
+    showToast('El teu navegador no suporta la veu');
+    return;
+  }
+  if (voiceState === VoiceState.LISTENING) {
+    recognition.stop();
+    setVoiceState(VoiceState.IDLE);
+    hideVoiceOverlay();
+  } else if (voiceState === VoiceState.IDLE) {
+    startListening();
+  }
+}
+
+function startListening() {
+  document.getElementById('voiceText').textContent = '';
+  document.getElementById('voiceParsed').textContent = '';
+  document.getElementById('voiceDots').style.display = '';
+  document.getElementById('voiceStatus').textContent = 'Escoltant...';
+  document.getElementById('voiceStatus').style.color = '#a78bfa';
+  showVoiceOverlay();
+  try {
+    recognition.start();
+  } catch (e) {
+    showVoiceError('No s\'ha pogut iniciar el micròfon.');
+  }
+}
+
+function setVoiceState(state) {
+  voiceState = state;
+  const btn = document.getElementById('micFab');
+  const icons = { mic: 'micIcon', stop: 'micIconStop', check: 'micIconCheck', x: 'micIconX' };
+  Object.values(icons).forEach(id => document.getElementById(id).style.display = 'none');
+  btn.classList.remove('listening', 'processing', 'success', 'error');
+
+  switch (state) {
+    case VoiceState.IDLE:
+      document.getElementById('micIcon').style.display = '';
+      break;
+    case VoiceState.LISTENING:
+      btn.classList.add('listening');
+      document.getElementById('micIconStop').style.display = '';
+      break;
+    case VoiceState.PROCESSING:
+      btn.classList.add('processing');
+      document.getElementById('micIcon').style.display = '';
+      break;
+    case VoiceState.SUCCESS:
+      btn.classList.add('success');
+      document.getElementById('micIconCheck').style.display = '';
+      setTimeout(() => { if (voiceState === VoiceState.SUCCESS) setVoiceState(VoiceState.IDLE); }, 2000);
+      break;
+    case VoiceState.ERROR:
+      btn.classList.add('error');
+      document.getElementById('micIconX').style.display = '';
+      setTimeout(() => { if (voiceState === VoiceState.ERROR) setVoiceState(VoiceState.IDLE); }, 2500);
+      break;
+  }
+}
+
+function showVoiceOverlay() {
+  document.getElementById('voiceOverlay').classList.add('visible');
+}
+
+function hideVoiceOverlay() {
+  document.getElementById('voiceOverlay').classList.remove('visible');
+}
+
+function showVoiceError(msg) {
+  setVoiceState(VoiceState.ERROR);
+  document.getElementById('voiceStatus').textContent = msg;
+  document.getElementById('voiceStatus').style.color = '#f87171';
+  document.getElementById('voiceDots').style.display = 'none';
+  setTimeout(() => { hideVoiceOverlay(); }, 3000);
+}
+
+function showVoiceSuccess(msg) {
+  setVoiceState(VoiceState.SUCCESS);
+  document.getElementById('voiceStatus').textContent = msg;
+  document.getElementById('voiceStatus').style.color = '#4ade80';
+  document.getElementById('voiceDots').style.display = 'none';
+  setTimeout(() => { hideVoiceOverlay(); }, 2000);
+}
+
+// --- PARSING ---
+function parseNumberWord(text) {
+  // Try direct digit match first
+  const digitMatch = text.match(/\d+/);
+  if (digitMatch) return parseInt(digitMatch[0]);
+
+  // Normalize text for number matching
+  const normalized = text.toLowerCase().trim();
+
+  // Try compound numbers like "trenta-cinc" or "trenta cinc"
+  // Pattern: tens + (- or space + i + space or -i-) + units
+  const compoundPattern = /\b(trenta|quaranta|cinquanta|seixanta|setanta|vuitanta|noranta)[\s-]+i[\s-]+(un|una|dos|dues|tres|quatre|cinc|sis|set|vuit|nou)\b/;
+  const compoundMatch = normalized.match(compoundPattern);
+  if (compoundMatch) {
+    const tens = CATALAN_NUMBERS[compoundMatch[1]] || 0;
+    const units = CATALAN_NUMBERS[compoundMatch[2]] || 0;
+    return tens + units;
+  }
+
+  // Try vint-i-X pattern (already in dictionary)
+  for (const [word, num] of Object.entries(CATALAN_NUMBERS)) {
+    if (normalized.includes(word)) return num;
+  }
+
+  return null;
+}
+
+function extractQuantity(text) {
+  // Look for quantity patterns: number + "unitats"/"unitat", or just a number
+  const patterns = [
+    /(\d+)\s*unitat/i,
+    /\b(\d+)\b/,
+  ];
+  for (const p of patterns) {
+    const m = text.match(p);
+    if (m) return parseInt(m[1]);
+  }
+
+  // Try Catalan number words before "unitat(s)"
+  const unitatPattern = /([\w\s-]+?)\s*unitat/i;
+  const um = text.match(unitatPattern);
+  if (um) {
+    const num = parseNumberWord(um[1]);
+    if (num !== null) return num;
+  }
+
+  // Try any number word in the text (scan from right to left to get the quantity, not the date)
+  // But avoid picking up date-related numbers - extract quantity from before "caduca"
+  let quantityZone = text;
+  const caducaIdx = text.indexOf('caduca');
+  if (caducaIdx > -1) quantityZone = text.substring(0, caducaIdx);
+
+  // Sort by value descending to match longer phrases first (e.g., "vint-i-cinc" before "cinc")
+  const sortedEntries = Object.entries(CATALAN_NUMBERS).sort((a, b) => b[0].length - a[0].length);
+  for (const [word, num] of sortedEntries) {
+    if (quantityZone.includes(word) && num > 0) return num;
+  }
+
+  return 1; // default
+}
+
+function extractExpiry(text) {
+  // Look for "caduca el X de Y" or "caducitat X de Y"
+  const expiryPattern = /(?:caduca|caducitat)\s+(?:el\s+|l')?(.+)/i;
+  const m = text.match(expiryPattern);
+  if (!m) return '';
+
+  const datePart = m[1].trim();
+  return parseCatalanDate(datePart);
+}
+
+function parseCatalanDate(text) {
+  let day = null;
+  let month = null;
+  let year = null;
+
+  // Extract day (number or word)
+  const dayDigit = text.match(/^(\d{1,2})/);
+  if (dayDigit) {
+    day = parseInt(dayDigit[1]);
+  } else {
+    // Try number words for day
+    const sortedEntries = Object.entries(CATALAN_NUMBERS).sort((a, b) => b[0].length - a[0].length);
+    for (const [word, num] of sortedEntries) {
+      if (text.startsWith(word) || text.includes(word)) {
+        if (num >= 1 && num <= 31) { day = num; break; }
+      }
+    }
+  }
+
+  // Extract month
+  for (const [monthName, monthNum] of Object.entries(CATALAN_MONTHS)) {
+    if (text.includes(monthName)) { month = monthNum; break; }
+  }
+
+  if (!day || !month) return '';
+
+  // Extract year
+  const yearDigit = text.match(/\b(20\d{2})\b/);
+  if (yearDigit) {
+    year = parseInt(yearDigit[1]);
+  } else {
+    // Try "dos mil vint-i-set" style years
+    const yearPattern = /(?:dos\s*mil\s*)([\w\s-]+)/;
+    const ym = text.match(yearPattern);
+    if (ym) {
+      const yearRest = parseNumberWord(ym[1]);
+      if (yearRest !== null) year = 2000 + yearRest;
+    }
+  }
+
+  if (!year) {
+    const now = new Date();
+    year = now.getFullYear();
+    // If month already passed, use next year
+    const testDate = new Date(year, month - 1, day);
+    if (testDate < now) year++;
+  }
+
+  const mm = String(month).padStart(2, '0');
+  const dd = String(day).padStart(2, '0');
+  return `${year}-${mm}-${dd}`;
+}
+
+function extractCategory(text) {
+  const lower = text.toLowerCase();
+  // Check category keywords
+  for (const [keyword, cat] of Object.entries(CATEGORY_KEYWORDS)) {
+    if (lower.includes(keyword)) return cat;
+  }
+  return '';
+}
+
+function extractAction(text) {
+  if (text.startsWith('treu') || text.includes(' treu ')) return 'remove';
+  if (text.startsWith('actualitza') || text.includes(' actualitza ')) return 'update';
+  // Default to add (covers "afegeix" and bare commands)
+  return 'add';
+}
+
+function extractProductName(text) {
+  let cleaned = text;
+
+  // Remove action words at the start
+  cleaned = cleaned.replace(/^(afegeix|actualitza|treu)\s+/i, '');
+
+  // Remove quantity phrases (number + unitats/unitat)
+  cleaned = cleaned.replace(/\b\d+\s*unitats?\b/gi, '');
+  // Remove Catalan number words followed by "unitat(s)"
+  const sortedNums = Object.keys(CATALAN_NUMBERS).sort((a, b) => b.length - a.length);
+  for (const word of sortedNums) {
+    const re = new RegExp('\\b' + word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s+unitats?\\b', 'gi');
+    cleaned = cleaned.replace(re, '');
+  }
+
+  // Remove expiry phrases
+  cleaned = cleaned.replace(/(?:caduca|caducitat)\s+.*/i, '');
+
+  // Remove category mentions at the end
+  cleaned = cleaned.replace(/\s+(?:categoria|de la categoria)\s+\w+\s*$/i, '');
+
+  // Remove standalone number words that are likely quantities (only if they appear right before a comma or at a natural boundary)
+  // Be careful not to remove numbers that are part of the product name
+  cleaned = cleaned.replace(/,\s*\d+\s*/g, ',');
+  cleaned = cleaned.replace(/,\s*$/g, '');
+
+  // Remove trailing commas, clean up
+  cleaned = cleaned.replace(/\s+/g, ' ').trim();
+  cleaned = cleaned.replace(/^[,\s]+|[,\s]+$/g, '').trim();
+
+  // Remove leading standalone quantity number words if they appear at the start after action removal
+  // e.g., "deu unitats" was removed but "deu" alone at start might remain
+  // Only remove if what follows looks like it continues
+  for (const word of sortedNums) {
+    const re = new RegExp('^' + word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*,?\\s*', 'i');
+    if (cleaned.match(re) && cleaned.length > word.length + 2) {
+      cleaned = cleaned.replace(re, '');
+      break;
+    }
+  }
+
+  cleaned = cleaned.replace(/^[,\s]+|[,\s]+$/g, '').trim();
+  return cleaned;
+}
+
+function findExistingProduct(name) {
+  if (!name) return null;
+  const lower = name.toLowerCase();
+
+  // Exact match
+  let found = products.find(p => p.name.toLowerCase() === lower);
+  if (found) return found;
+
+  // Contains match
+  found = products.find(p => p.name.toLowerCase().includes(lower) || lower.includes(p.name.toLowerCase()));
+  if (found) return found;
+
+  // Fuzzy: check if 70%+ of words match
+  const words = lower.split(/\s+/);
+  if (words.length >= 2) {
+    let bestMatch = null;
+    let bestScore = 0;
+    for (const p of products) {
+      const pWords = p.name.toLowerCase().split(/\s+/);
+      let matchCount = 0;
+      for (const w of words) {
+        if (pWords.some(pw => pw.includes(w) || w.includes(pw))) matchCount++;
+      }
+      const score = matchCount / Math.max(words.length, pWords.length);
+      if (score > bestScore && score >= 0.5) {
+        bestScore = score;
+        bestMatch = p;
+      }
+    }
+    if (bestMatch) return bestMatch;
+  }
+
+  return null;
+}
+
+function processVoiceCommand(text) {
+  setVoiceState(VoiceState.PROCESSING);
+  document.getElementById('voiceStatus').textContent = 'Processant...';
+  document.getElementById('voiceStatus').style.color = '#a78bfa';
+  document.getElementById('voiceDots').style.display = 'none';
+
+  const action = extractAction(text);
+  const quantity = extractQuantity(text);
+  const expiry = extractExpiry(text);
+  const category = extractCategory(text);
+  const productName = extractProductName(text);
+
+  if (!productName || productName.length < 2) {
+    document.getElementById('voiceParsed').innerHTML = '<span style="color:#fbbf24">No s\'ha pogut entendre el producte. Torna a provar.</span><br><span style="color:#9ca3af;font-size:12px">He sentit: "' + escHtml(text) + '"</span>';
+    showVoiceError('No he entès el producte. Torna a provar.');
+    return;
+  }
+
+  // Show parsed result
+  let parsedInfo = '<strong>' + escHtml(productName) + '</strong>';
+  parsedInfo += ' &mdash; ' + quantity + ' unitat' + (quantity !== 1 ? 's' : '');
+  if (expiry) parsedInfo += ' &mdash; Cad: ' + formatDate(expiry);
+  if (category) parsedInfo += ' &mdash; ' + category;
+  document.getElementById('voiceParsed').innerHTML = parsedInfo;
+
+  const existing = findExistingProduct(productName);
+
+  let confirmMsg = '';
+
+  if (action === 'remove') {
+    if (existing) {
+      existing.quantity = Math.max(0, existing.quantity - quantity);
+      saveToStorage();
+      renderProducts();
+      confirmMsg = 'Tret: ' + existing.name + ', ' + quantity + ' unitat' + (quantity !== 1 ? 's' : '') + '. Queden ' + existing.quantity;
+      showToast(confirmMsg);
+    } else {
+      showVoiceError('No he trobat "' + productName + '" a l\'inventari.');
+      return;
+    }
+  } else if (action === 'update') {
+    if (existing) {
+      existing.quantity = quantity;
+      if (expiry) existing.expiry = expiry;
+      if (category) existing.category = category;
+      saveToStorage();
+      renderProducts();
+      confirmMsg = 'Actualitzat: ' + existing.name + ' a ' + quantity + ' unitat' + (quantity !== 1 ? 's' : '');
+      showToast(confirmMsg);
+    } else {
+      showVoiceError('No he trobat "' + productName + '" a l\'inventari.');
+      return;
+    }
+  } else {
+    // Add
+    if (existing) {
+      existing.quantity += quantity;
+      if (expiry && !existing.expiry) existing.expiry = expiry;
+      saveToStorage();
+      renderProducts();
+      confirmMsg = 'Afegit: ' + existing.name + ' +' + quantity + ' (total: ' + existing.quantity + ')';
+      showToast(confirmMsg);
+    } else {
+      const newProduct = {
+        id: genId(),
+        name: productName.charAt(0).toUpperCase() + productName.slice(1),
+        category: category || 'Altres',
+        quantity: quantity,
+        expiry: expiry || '',
+        priceBuy: 0,
+        priceSell: 0,
+      };
+      products.push(newProduct);
+      saveToStorage();
+      renderProducts();
+      confirmMsg = 'Afegit: ' + newProduct.name + ' - ' + quantity + ' unitat' + (quantity !== 1 ? 's' : '');
+      showToast(confirmMsg);
+    }
+  }
+
+  // Speech synthesis confirmation
+  speakCatalan(confirmMsg);
+  showVoiceSuccess(confirmMsg);
+}
+
+function speakCatalan(text) {
+  if (!('speechSynthesis' in window)) return;
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = 'ca-ES';
+  utterance.rate = 1.0;
+  utterance.pitch = 1.0;
+  // Try to find a Catalan voice
+  const voices = speechSynthesis.getVoices();
+  const catalanVoice = voices.find(v => v.lang.startsWith('ca'));
+  if (catalanVoice) utterance.voice = catalanVoice;
+  speechSynthesis.speak(utterance);
+}
+
+// Preload voices (some browsers need this)
+if ('speechSynthesis' in window) {
+  speechSynthesis.onvoiceschanged = () => { speechSynthesis.getVoices(); };
+}
+
+// Initialize voice on DOM ready
+document.addEventListener('DOMContentLoaded', () => {
+  initVoice();
 });
 
 // PWA: Register service worker if available (optional, for offline support)

@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Codis QR - La Botiga de la Cris</title>
+    <meta name="robots" content="noindex, nofollow">
+
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌿</text></svg>">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cream: '#FDF8F0',
+                        'cream-dark': '#F5EDE0',
+                        sage: {
+                            50: '#F0F5F0',
+                            100: '#DDE8DD',
+                            200: '#B8D4B8',
+                            300: '#8FBA8F',
+                            400: '#6A9E6A',
+                            500: '#4A7C4A',
+                            600: '#3D6B3D',
+                            700: '#2F5A2F',
+                            800: '#244824',
+                            900: '#1A361A',
+                        },
+                        earth: {
+                            100: '#F0E6D6',
+                            200: '#E0D0B8',
+                            300: '#C4A882',
+                            400: '#A68B5B',
+                            500: '#8B7042',
+                            600: '#6E5830',
+                            700: '#5A4726',
+                            800: '#45361D',
+                        },
+                    },
+                    fontFamily: {
+                        display: ['Playfair Display', 'Georgia', 'serif'],
+                        body: ['Open Sans', 'system-ui', 'sans-serif'],
+                    },
+                },
+            },
+        }
+    </script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap" rel="stylesheet">
+
+    <!-- QR Code library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <style>
+        @media print {
+            body {
+                background: white !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            .print-only {
+                display: block !important;
+            }
+
+            .qr-grid {
+                display: grid !important;
+                grid-template-columns: 1fr 1fr !important;
+                gap: 0 !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+
+            .qr-card {
+                break-inside: avoid;
+                page-break-inside: avoid;
+                border: 1px dashed #ccc !important;
+                border-radius: 0 !important;
+                box-shadow: none !important;
+                padding: 20px !important;
+                margin: 0 !important;
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: center !important;
+                justify-content: center !important;
+                min-height: calc(50vh - 10px);
+                position: relative;
+            }
+
+            .qr-card.print-single {
+                min-height: 100vh;
+                grid-column: 1 / -1;
+            }
+
+            .qr-card .qr-container img,
+            .qr-card .qr-container canvas {
+                width: 200px !important;
+                height: 200px !important;
+            }
+
+            .qr-card .print-shop-info {
+                display: block !important;
+            }
+
+            .qr-card .card-buttons {
+                display: none !important;
+            }
+
+            /* Cut marks at corners */
+            .qr-card::before {
+                content: '';
+                position: absolute;
+                top: -1px;
+                left: -1px;
+                width: 15px;
+                height: 15px;
+                border-top: 2px solid #999;
+                border-left: 2px solid #999;
+            }
+            .qr-card::after {
+                content: '';
+                position: absolute;
+                top: -1px;
+                right: -1px;
+                width: 15px;
+                height: 15px;
+                border-top: 2px solid #999;
+                border-right: 2px solid #999;
+            }
+
+            .print-title {
+                display: block !important;
+                text-align: center;
+                font-family: 'Playfair Display', Georgia, serif;
+                font-size: 18pt;
+                color: #244824;
+                margin-bottom: 10px;
+            }
+
+            /* Hide cards not marked for single print */
+            .qr-card.print-hidden {
+                display: none !important;
+            }
+        }
+
+        /* Screen: hide print-only elements */
+        .print-only {
+            display: none;
+        }
+        .print-shop-info {
+            display: none;
+        }
+    </style>
+</head>
+
+<body class="font-body text-earth-800 bg-cream min-h-screen">
+
+    <!-- Header -->
+    <header class="no-print bg-sage-800 text-white py-6">
+        <div class="max-w-5xl mx-auto px-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <a href="index.html" class="inline-flex items-center gap-2 text-sage-200 hover:text-white text-sm transition-colors mb-3">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                        Tornar a la web
+                    </a>
+                    <h1 class="font-display text-2xl sm:text-3xl font-bold">Codis QR</h1>
+                    <p class="text-sage-200 text-sm mt-1 font-display italic">La Botiga de la Cris</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button onclick="printAll()" class="inline-flex items-center gap-2 bg-white text-sage-800 px-5 py-2.5 rounded-full font-medium hover:bg-sage-50 transition-colors text-sm shadow-md">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                        Imprimir tots
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Subtitle -->
+    <div class="no-print bg-sage-700 text-sage-100 py-3 text-center text-sm">
+        Imprimeix i enganxa a la botiga, targetes de visita, bosses...
+    </div>
+
+    <!-- Print title (hidden on screen) -->
+    <div class="print-title print-only">Codis QR - La Botiga de la Cris</div>
+
+    <!-- QR Grid -->
+    <main class="max-w-5xl mx-auto px-6 py-10">
+        <div class="qr-grid grid grid-cols-1 md:grid-cols-2 gap-6" id="qr-grid">
+            <!-- Cards generated by JS -->
+        </div>
+
+        <!-- Custom QR Section -->
+        <section class="no-print mt-16 bg-white rounded-2xl p-8 shadow-sm border border-sage-100">
+            <h2 class="font-display text-xl font-semibold text-sage-800 mb-1">Personalitzar</h2>
+            <p class="text-earth-400 text-sm mb-6">Genera un codi QR per a qualsevol URL</p>
+
+            <div class="flex flex-col sm:flex-row gap-3">
+                <input
+                    type="url"
+                    id="custom-url"
+                    placeholder="https://exemple.com"
+                    class="flex-1 px-4 py-3 rounded-xl border border-earth-200 focus:border-sage-400 focus:ring-2 focus:ring-sage-200 outline-none text-sm transition-all"
+                >
+                <input
+                    type="text"
+                    id="custom-label"
+                    placeholder="Etiqueta (opcional)"
+                    class="sm:w-48 px-4 py-3 rounded-xl border border-earth-200 focus:border-sage-400 focus:ring-2 focus:ring-sage-200 outline-none text-sm transition-all"
+                >
+                <button
+                    onclick="generateCustomQR()"
+                    class="inline-flex items-center justify-center gap-2 bg-sage-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-sage-700 transition-colors text-sm"
+                >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                    Generar
+                </button>
+            </div>
+
+            <div id="custom-qr-result" class="mt-6 hidden">
+                <div class="flex flex-col items-center gap-4 p-6 bg-cream rounded-xl border border-sage-100">
+                    <div id="custom-qr-code"></div>
+                    <p id="custom-qr-label" class="font-display font-semibold text-sage-800 text-sm"></p>
+                    <p id="custom-qr-url" class="text-earth-400 text-xs break-all max-w-xs text-center"></p>
+                    <div class="flex gap-3">
+                        <button onclick="downloadCustomQR()" class="inline-flex items-center gap-1.5 text-sage-600 hover:text-sage-700 text-xs font-medium transition-colors">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                            Descarregar PNG
+                        </button>
+                        <button onclick="printSingleCustom()" class="inline-flex items-center gap-1.5 text-sage-600 hover:text-sage-700 text-xs font-medium transition-colors">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                            Imprimir
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Back link -->
+        <div class="no-print mt-10 text-center">
+            <a href="index.html" class="inline-flex items-center gap-2 text-sage-600 hover:text-sage-700 font-medium text-sm transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                Tornar a la pàgina principal
+            </a>
+        </div>
+    </main>
+
+    <script>
+        const qrCodes = [
+            {
+                id: 'web',
+                url: 'https://botigacris.pages.dev',
+                label: 'Visita la nostra web',
+                icon: '🌐',
+                privat: false
+            },
+            {
+                id: 'whatsapp',
+                url: 'https://wa.me/34973XXXXXX?text=Hola!%20Voldria%20informació',
+                label: 'Escriu-nos per WhatsApp',
+                icon: '💬',
+                privat: false
+            },
+            {
+                id: 'instagram',
+                url: 'https://instagram.com/labotigadelacris',
+                label: 'Segueix-nos a Instagram',
+                icon: '📸',
+                privat: false
+            },
+            {
+                id: 'maps',
+                url: 'https://maps.google.com/?q=C/+Hostal+14,+Lleida+25001',
+                label: 'Com arribar',
+                icon: '📍',
+                privat: false
+            },
+            {
+                id: 'gestio',
+                url: 'https://botigacris.pages.dev/gestio.html',
+                label: 'Gestió (privat)',
+                icon: '📦',
+                privat: true
+            }
+        ];
+
+        const grid = document.getElementById('qr-grid');
+
+        qrCodes.forEach((item, index) => {
+            const card = document.createElement('div');
+            card.className = `qr-card bg-white rounded-2xl p-6 shadow-sm border-2 ${
+                item.privat ? 'border-earth-300 border-dashed' : 'border-sage-200'
+            } flex flex-col items-center text-center transition-all hover:shadow-md`;
+            card.id = `qr-card-${item.id}`;
+
+            card.innerHTML = `
+                ${item.privat ? '<div class="no-print self-end mb-2"><span class="bg-earth-100 text-earth-600 text-xs font-medium px-3 py-1 rounded-full">Privat</span></div>' : ''}
+                <div class="text-3xl mb-3">${item.icon}</div>
+                <div class="qr-container bg-white p-3 rounded-xl border border-sage-100 mb-4" id="qr-${item.id}"></div>
+                <p class="font-display font-semibold text-sage-800 text-sm mb-1">${item.label}</p>
+                <p class="text-earth-400 text-xs break-all max-w-[220px] leading-relaxed">${item.url}</p>
+
+                <!-- Print-only shop info -->
+                <div class="print-shop-info mt-4 pt-3 border-t border-sage-100 text-center">
+                    <p class="font-display font-semibold text-sage-800 text-xs">La Botiga de la Cris</p>
+                    <p class="text-earth-400 text-[10px]">C/ Hostal 14 &middot; 25001 Lleida</p>
+                </div>
+
+                <div class="card-buttons flex gap-3 mt-4 pt-4 border-t border-sage-50 no-print">
+                    <button onclick="downloadQR('${item.id}', '${item.label}')" class="inline-flex items-center gap-1.5 text-sage-600 hover:text-sage-700 text-xs font-medium transition-colors">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                        Descarregar PNG
+                    </button>
+                    <button onclick="printSingle('${item.id}')" class="inline-flex items-center gap-1.5 text-sage-600 hover:text-sage-700 text-xs font-medium transition-colors">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                        Imprimir
+                    </button>
+                </div>
+            `;
+
+            grid.appendChild(card);
+
+            new QRCode(document.getElementById(`qr-${item.id}`), {
+                text: item.url,
+                width: 150,
+                height: 150,
+                colorDark: item.privat ? '#5A4726' : '#244824',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.H
+            });
+        });
+
+        function downloadQR(id, label) {
+            const container = document.getElementById(`qr-${id}`);
+            const canvas = container.querySelector('canvas');
+            if (!canvas) return;
+
+            // Create a larger canvas for download
+            const downloadCanvas = document.createElement('canvas');
+            const size = 400;
+            const padding = 40;
+            const totalSize = size + padding * 2;
+            downloadCanvas.width = totalSize;
+            downloadCanvas.height = totalSize + 60;
+            const ctx = downloadCanvas.getContext('2d');
+
+            // White background
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, downloadCanvas.width, downloadCanvas.height);
+
+            // Draw QR code scaled up
+            ctx.drawImage(canvas, padding, padding, size, size);
+
+            // Label text
+            ctx.fillStyle = '#244824';
+            ctx.font = 'bold 16px "Open Sans", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(label, totalSize / 2, totalSize + 20);
+
+            // Shop name
+            ctx.fillStyle = '#8B7042';
+            ctx.font = '12px "Open Sans", sans-serif';
+            ctx.fillText('La Botiga de la Cris - C/ Hostal 14, Lleida', totalSize / 2, totalSize + 42);
+
+            const link = document.createElement('a');
+            link.download = `qr-botiga-${id}.png`;
+            link.href = downloadCanvas.toDataURL('image/png');
+            link.click();
+        }
+
+        function printAll() {
+            // Remove any single-print classes
+            document.querySelectorAll('.qr-card').forEach(card => {
+                card.classList.remove('print-hidden', 'print-single');
+            });
+            window.print();
+        }
+
+        function printSingle(id) {
+            // Hide all cards except the target
+            document.querySelectorAll('.qr-card').forEach(card => {
+                if (card.id === `qr-card-${id}`) {
+                    card.classList.remove('print-hidden');
+                    card.classList.add('print-single');
+                } else {
+                    card.classList.add('print-hidden');
+                }
+            });
+            window.print();
+            // Restore after print
+            setTimeout(() => {
+                document.querySelectorAll('.qr-card').forEach(card => {
+                    card.classList.remove('print-hidden', 'print-single');
+                });
+            }, 500);
+        }
+
+        // Custom QR
+        let customQRInstance = null;
+
+        function generateCustomQR() {
+            const urlInput = document.getElementById('custom-url');
+            const labelInput = document.getElementById('custom-label');
+            const url = urlInput.value.trim();
+
+            if (!url) {
+                urlInput.focus();
+                urlInput.classList.add('border-red-400');
+                setTimeout(() => urlInput.classList.remove('border-red-400'), 2000);
+                return;
+            }
+
+            const label = labelInput.value.trim() || 'Codi QR personalitzat';
+            const resultDiv = document.getElementById('custom-qr-result');
+            const codeDiv = document.getElementById('custom-qr-code');
+            const labelEl = document.getElementById('custom-qr-label');
+            const urlEl = document.getElementById('custom-qr-url');
+
+            // Clear previous
+            codeDiv.innerHTML = '';
+            if (customQRInstance) customQRInstance = null;
+
+            customQRInstance = new QRCode(codeDiv, {
+                text: url,
+                width: 150,
+                height: 150,
+                colorDark: '#244824',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.H
+            });
+
+            labelEl.textContent = label;
+            urlEl.textContent = url;
+            resultDiv.classList.remove('hidden');
+            resultDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function downloadCustomQR() {
+            const container = document.getElementById('custom-qr-code');
+            const canvas = container.querySelector('canvas');
+            if (!canvas) return;
+
+            const label = document.getElementById('custom-qr-label').textContent;
+
+            const downloadCanvas = document.createElement('canvas');
+            const size = 400;
+            const padding = 40;
+            const totalSize = size + padding * 2;
+            downloadCanvas.width = totalSize;
+            downloadCanvas.height = totalSize + 60;
+            const ctx = downloadCanvas.getContext('2d');
+
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, downloadCanvas.width, downloadCanvas.height);
+            ctx.drawImage(canvas, padding, padding, size, size);
+
+            ctx.fillStyle = '#244824';
+            ctx.font = 'bold 16px "Open Sans", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(label, totalSize / 2, totalSize + 20);
+
+            ctx.fillStyle = '#8B7042';
+            ctx.font = '12px "Open Sans", sans-serif';
+            ctx.fillText('La Botiga de la Cris', totalSize / 2, totalSize + 42);
+
+            const link = document.createElement('a');
+            link.download = 'qr-botiga-personalitzat.png';
+            link.href = downloadCanvas.toDataURL('image/png');
+            link.click();
+        }
+
+        function printSingleCustom() {
+            // Hide all preconfigured cards, and temporarily add custom to grid
+            const grid = document.getElementById('qr-grid');
+            document.querySelectorAll('.qr-card').forEach(card => {
+                card.classList.add('print-hidden');
+            });
+
+            // Create temporary print card for custom QR
+            const container = document.getElementById('custom-qr-code');
+            const canvas = container.querySelector('canvas');
+            const label = document.getElementById('custom-qr-label').textContent;
+            const url = document.getElementById('custom-qr-url').textContent;
+
+            const tempCard = document.createElement('div');
+            tempCard.className = 'qr-card bg-white rounded-2xl p-6 border-2 border-sage-200 flex flex-col items-center text-center print-single';
+            tempCard.id = 'temp-print-card';
+
+            const clonedCanvas = document.createElement('canvas');
+            clonedCanvas.width = canvas.width;
+            clonedCanvas.height = canvas.height;
+            clonedCanvas.getContext('2d').drawImage(canvas, 0, 0);
+
+            tempCard.innerHTML = `
+                <div class="qr-container bg-white p-3 rounded-xl border border-sage-100 mb-4"></div>
+                <p class="font-display font-semibold text-sage-800 text-sm mb-1">${label}</p>
+                <p class="text-earth-400 text-xs break-all max-w-[220px]">${url}</p>
+                <div class="print-shop-info mt-4 pt-3 border-t border-sage-100 text-center">
+                    <p class="font-display font-semibold text-sage-800 text-xs">La Botiga de la Cris</p>
+                    <p class="text-earth-400 text-[10px]">C/ Hostal 14 &middot; 25001 Lleida</p>
+                </div>
+            `;
+
+            grid.appendChild(tempCard);
+            tempCard.querySelector('.qr-container').appendChild(clonedCanvas);
+
+            window.print();
+
+            setTimeout(() => {
+                tempCard.remove();
+                document.querySelectorAll('.qr-card').forEach(card => {
+                    card.classList.remove('print-hidden', 'print-single');
+                });
+            }, 500);
+        }
+
+        // Enter key on custom URL input
+        document.getElementById('custom-url').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') generateCustomQR();
+        });
+        document.getElementById('custom-label').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') generateCustomQR();
+        });
+    </script>
+</body>
+</html>
