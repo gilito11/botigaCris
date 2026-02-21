@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#166534">
+<title>Botiga Cris - Gestio d'Inventari</title>
+<link rel="manifest" href="./manifest.json">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        verd: { 50:'#f0fdf4', 100:'#dcfce7', 200:'#bbf7d0', 300:'#86efac', 400:'#4ade80', 500:'#22c55e', 600:'#16a34a', 700:'#166534', 800:'#14532d', 900:'#052e16' }
+      }
+    }
+  }
+}
+</script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap');
+  * { font-family: 'Nunito', sans-serif; -webkit-tap-highlight-color: transparent; }
+  body { font-size: 17px; overscroll-behavior: none; }
+  input, select, textarea { font-size: 18px !important; }
+  .btn-big { min-height: 52px; font-size: 19px; }
+  .card-product { transition: transform 0.1s; }
+  .card-product:active { transform: scale(0.97); }
+  .fab { position: fixed; bottom: 28px; right: 20px; width: 68px; height: 68px; border-radius: 50%; font-size: 36px; z-index: 40; box-shadow: 0 4px 16px rgba(0,0,0,0.25); }
+  .modal-overlay { background: rgba(0,0,0,0.45); backdrop-filter: blur(2px); }
+  .slide-up { animation: slideUp 0.25s ease-out; }
+  @keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .badge { min-width: 24px; height: 24px; font-size: 13px; }
+  ::-webkit-scrollbar { display: none; }
+  .cat-btn { scroll-snap-align: start; }
+  .cat-scroll { scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
+  input[type="date"] { min-height: 48px; }
+  select { min-height: 48px; }
+</style>
+</head>
+<body class="bg-verd-50 min-h-screen pb-28">
+
+<!-- HEADER -->
+<header class="bg-verd-700 text-white px-4 pt-3 pb-3 sticky top-0 z-30 shadow-lg">
+  <div class="flex items-center justify-between mb-2">
+    <div class="flex items-center gap-2">
+      <span class="text-2xl">🌿</span>
+      <h1 class="text-xl font-extrabold tracking-tight">Botiga Cris</h1>
+    </div>
+    <div class="flex gap-2">
+      <button onclick="exportCSV()" title="Exportar" class="bg-verd-600 hover:bg-verd-500 rounded-xl px-3 py-2 text-lg font-bold active:scale-95 transition">
+        📤
+      </button>
+      <label title="Importar" class="bg-verd-600 hover:bg-verd-500 rounded-xl px-3 py-2 text-lg font-bold cursor-pointer active:scale-95 transition">
+        📥
+        <input type="file" accept=".csv" onchange="importCSV(event)" class="hidden">
+      </label>
+    </div>
+  </div>
+  <!-- SEARCH -->
+  <div class="relative">
+    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-verd-300 text-xl">🔍</span>
+    <input id="searchInput" type="search" placeholder="Cercar producte..."
+      class="w-full pl-10 pr-4 py-3 rounded-xl bg-verd-600 text-white placeholder-verd-200 font-semibold text-lg border-2 border-verd-500 focus:border-verd-300 focus:outline-none"
+      oninput="renderProducts()">
+  </div>
+</header>
+
+<!-- SUMMARY BAR -->
+<div id="summaryBar" class="bg-white border-b border-verd-200 px-4 py-2 flex justify-around text-center shadow-sm">
+  <div>
+    <div id="sumTotal" class="text-2xl font-extrabold text-verd-700">0</div>
+    <div class="text-xs text-gray-500 font-semibold">Productes</div>
+  </div>
+  <div class="border-l border-verd-200"></div>
+  <div>
+    <div id="sumExpiring" class="text-2xl font-extrabold text-orange-500">0</div>
+    <div class="text-xs text-gray-500 font-semibold">Per caducar</div>
+  </div>
+  <div class="border-l border-verd-200"></div>
+  <div>
+    <div id="sumLowStock" class="text-2xl font-extrabold text-red-500">0</div>
+    <div class="text-xs text-gray-500 font-semibold">Poc estoc</div>
+  </div>
+</div>
+
+<!-- CATEGORY FILTER -->
+<div class="bg-white border-b border-verd-100 px-2 py-2 overflow-x-auto cat-scroll flex gap-2 whitespace-nowrap shadow-sm">
+  <button onclick="setCategory('Totes')" data-cat="Totes" class="cat-btn cat-active px-4 py-2 rounded-full font-bold text-base border-2 border-verd-600 bg-verd-600 text-white min-h-[44px] active:scale-95 transition">
+    Totes
+  </button>
+  <button onclick="setCategory('Alimentació')" data-cat="Alimentació" class="cat-btn px-4 py-2 rounded-full font-bold text-base border-2 border-verd-300 text-verd-700 bg-verd-50 min-h-[44px] active:scale-95 transition">
+    🍯 Alimentació
+  </button>
+  <button onclick="setCategory('Cosmètica')" data-cat="Cosmètica" class="cat-btn px-4 py-2 rounded-full font-bold text-base border-2 border-verd-300 text-verd-700 bg-verd-50 min-h-[44px] active:scale-95 transition">
+    🧴 Cosmètica
+  </button>
+  <button onclick="setCategory('Suplements')" data-cat="Suplements" class="cat-btn px-4 py-2 rounded-full font-bold text-base border-2 border-verd-300 text-verd-700 bg-verd-50 min-h-[44px] active:scale-95 transition">
+    💊 Suplements
+  </button>
+  <button onclick="setCategory('Infusions')" data-cat="Infusions" class="cat-btn px-4 py-2 rounded-full font-bold text-base border-2 border-verd-300 text-verd-700 bg-verd-50 min-h-[44px] active:scale-95 transition">
+    🍵 Infusions
+  </button>
+  <button onclick="setCategory('Higiene')" data-cat="Higiene" class="cat-btn px-4 py-2 rounded-full font-bold text-base border-2 border-verd-300 text-verd-700 bg-verd-50 min-h-[44px] active:scale-95 transition">
+    🧼 Higiene
+  </button>
+  <button onclick="setCategory('Altres')" data-cat="Altres" class="cat-btn px-4 py-2 rounded-full font-bold text-base border-2 border-verd-300 text-verd-700 bg-verd-50 min-h-[44px] active:scale-95 transition">
+    📦 Altres
+  </button>
+</div>
+
+<!-- PRODUCT LIST -->
+<main id="productList" class="px-3 py-3 space-y-3">
+</main>
+
+<!-- EMPTY STATE -->
+<div id="emptyState" class="hidden text-center py-16 px-6">
+  <div class="text-6xl mb-4">🌱</div>
+  <p class="text-xl font-bold text-gray-400">Cap producte trobat</p>
+  <p class="text-gray-400 mt-1">Prem el boto + per afegir-ne un</p>
+</div>
+
+<!-- FAB ADD BUTTON -->
+<button onclick="openModal()" class="fab bg-verd-600 hover:bg-verd-500 text-white flex items-center justify-center shadow-xl active:scale-90 transition font-bold border-4 border-verd-400">
+  ＋
+</button>
+
+<!-- MODAL (Add/Edit) -->
+<div id="modal" class="fixed inset-0 z-50 hidden">
+  <div class="modal-overlay absolute inset-0" onclick="closeModal()"></div>
+  <div class="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl slide-up max-h-[92vh] overflow-y-auto">
+    <div class="sticky top-0 bg-white rounded-t-3xl z-10 px-5 pt-4 pb-2 border-b border-gray-100">
+      <div class="flex items-center justify-between">
+        <h2 id="modalTitle" class="text-xl font-extrabold text-verd-700">Afegir producte</h2>
+        <button onclick="closeModal()" class="text-3xl text-gray-400 hover:text-gray-600 px-2 active:scale-90 transition">✕</button>
+      </div>
+      <div class="w-12 h-1 bg-gray-300 rounded-full mx-auto mt-2"></div>
+    </div>
+    <form id="productForm" onsubmit="saveProduct(event)" class="px-5 py-4 space-y-4 pb-8">
+      <input type="hidden" id="editId" value="">
+
+      <div>
+        <label class="block text-base font-bold text-gray-600 mb-1">Nom del producte *</label>
+        <input id="fName" type="text" required placeholder="Ex: Oli de coco bio"
+          class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-lg font-semibold focus:border-verd-500 focus:outline-none focus:ring-2 focus:ring-verd-200">
+      </div>
+
+      <div>
+        <label class="block text-base font-bold text-gray-600 mb-1">Categoria *</label>
+        <select id="fCategory" required
+          class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-lg font-semibold focus:border-verd-500 focus:outline-none bg-white focus:ring-2 focus:ring-verd-200">
+          <option value="">-- Tria categoria --</option>
+          <option value="Alimentació">🍯 Alimentació</option>
+          <option value="Cosmètica">🧴 Cosmètica</option>
+          <option value="Suplements">💊 Suplements</option>
+          <option value="Infusions">🍵 Infusions</option>
+          <option value="Higiene">🧼 Higiene</option>
+          <option value="Altres">📦 Altres</option>
+        </select>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-base font-bold text-gray-600 mb-1">Quantitat *</label>
+          <div class="flex items-center border-2 border-gray-200 rounded-xl overflow-hidden focus-within:border-verd-500 focus-within:ring-2 focus-within:ring-verd-200">
+            <button type="button" onclick="adjustQty(-1)" class="px-4 py-3 text-2xl font-bold text-verd-700 bg-gray-50 hover:bg-gray-100 active:bg-gray-200 min-h-[52px]">−</button>
+            <input id="fQuantity" type="number" min="0" required value="1"
+              class="w-full text-center text-xl font-bold border-0 focus:outline-none py-3">
+            <button type="button" onclick="adjustQty(1)" class="px-4 py-3 text-2xl font-bold text-verd-700 bg-gray-50 hover:bg-gray-100 active:bg-gray-200 min-h-[52px]">＋</button>
+          </div>
+        </div>
+        <div>
+          <label class="block text-base font-bold text-gray-600 mb-1">Caducitat</label>
+          <input id="fExpiry" type="date"
+            class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-lg font-semibold focus:border-verd-500 focus:outline-none focus:ring-2 focus:ring-verd-200">
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-base font-bold text-gray-600 mb-1">Preu compra (€)</label>
+          <input id="fPriceBuy" type="number" step="0.01" min="0" placeholder="0.00"
+            class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-lg font-semibold focus:border-verd-500 focus:outline-none focus:ring-2 focus:ring-verd-200">
+        </div>
+        <div>
+          <label class="block text-base font-bold text-gray-600 mb-1">Preu venda (€)</label>
+          <input id="fPriceSell" type="number" step="0.01" min="0" placeholder="0.00"
+            class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-lg font-semibold focus:border-verd-500 focus:outline-none focus:ring-2 focus:ring-verd-200">
+        </div>
+      </div>
+
+      <button type="submit" id="btnSave"
+        class="w-full bg-verd-600 hover:bg-verd-500 text-white font-extrabold text-xl py-4 rounded-xl shadow-lg active:scale-95 transition btn-big mt-2">
+        ✅ Guardar producte
+      </button>
+
+      <button type="button" id="btnDelete" onclick="deleteProduct()" class="hidden w-full bg-red-500 hover:bg-red-600 text-white font-extrabold text-xl py-4 rounded-xl shadow-lg active:scale-95 transition btn-big">
+        🗑️ Esborrar producte
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- CONFIRM DELETE MODAL -->
+<div id="confirmModal" class="fixed inset-0 z-[60] hidden">
+  <div class="modal-overlay absolute inset-0" onclick="closeConfirm()"></div>
+  <div class="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl slide-up px-5 py-6 pb-10">
+    <div class="text-center mb-5">
+      <div class="text-5xl mb-3">⚠️</div>
+      <h3 class="text-xl font-extrabold text-gray-800">Segur que vols esborrar?</h3>
+      <p id="confirmName" class="text-lg text-gray-500 mt-1 font-semibold"></p>
+    </div>
+    <div class="flex gap-3">
+      <button onclick="closeConfirm()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-extrabold text-xl py-4 rounded-xl active:scale-95 transition btn-big">
+        No, torna
+      </button>
+      <button onclick="confirmDelete()" class="flex-1 bg-red-500 hover:bg-red-600 text-white font-extrabold text-xl py-4 rounded-xl active:scale-95 transition btn-big">
+        Si, esborra
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="fixed bottom-24 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded-2xl font-bold text-lg shadow-xl z-[70] hidden transition-opacity"></div>
+
+<script>
+const STORAGE_KEY = 'botigaCris_products';
+const CAT_EMOJI = { 'Alimentació':'🍯', 'Cosmètica':'🧴', 'Suplements':'💊', 'Infusions':'🍵', 'Higiene':'🧼', 'Altres':'📦' };
+
+let products = [];
+let currentCategory = 'Totes';
+let deleteTargetId = null;
+
+// --- DATA ---
+function loadProducts() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (raw) {
+    products = JSON.parse(raw);
+  } else {
+    products = getDefaultProducts();
+    saveToStorage();
+  }
+}
+
+function saveToStorage() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
+}
+
+function getDefaultProducts() {
+  const today = new Date();
+  const d = (days) => {
+    const dt = new Date(today);
+    dt.setDate(dt.getDate() + days);
+    return dt.toISOString().split('T')[0];
+  };
+  return [
+    { id: genId(), name: 'Oli de coco bio', category: 'Alimentació', quantity: 8, expiry: d(120), priceBuy: 4.50, priceSell: 8.95 },
+    { id: genId(), name: 'Infusio de camamilla', category: 'Infusions', quantity: 15, expiry: d(200), priceBuy: 1.80, priceSell: 3.50 },
+    { id: genId(), name: 'Crema facial aloe vera', category: 'Cosmètica', quantity: 2, expiry: d(25), priceBuy: 6.00, priceSell: 12.90 },
+    { id: genId(), name: 'Quinoa eco 500g', category: 'Alimentació', quantity: 5, expiry: d(5), priceBuy: 3.20, priceSell: 5.95 },
+    { id: genId(), name: 'Sabo de marsella', category: 'Higiene', quantity: 12, expiry: '', priceBuy: 2.10, priceSell: 4.50 },
+    { id: genId(), name: 'Mel ecologica 1kg', category: 'Alimentació', quantity: 1, expiry: d(300), priceBuy: 7.00, priceSell: 13.50 },
+  ];
+}
+
+function genId() {
+  return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+}
+
+// --- EXPIRY HELPERS ---
+function getExpiryStatus(expiry) {
+  if (!expiry) return 'ok';
+  const today = new Date(); today.setHours(0,0,0,0);
+  const exp = new Date(expiry + 'T00:00:00');
+  const diff = Math.ceil((exp - today) / (1000*60*60*24));
+  if (diff < 0) return 'expired';
+  if (diff <= 7) return 'critical';
+  if (diff <= 30) return 'warning';
+  return 'ok';
+}
+
+function formatDate(d) {
+  if (!d) return '—';
+  const parts = d.split('-');
+  return parts[2] + '/' + parts[1] + '/' + parts[0];
+}
+
+function daysUntilExpiry(expiry) {
+  if (!expiry) return null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const exp = new Date(expiry + 'T00:00:00');
+  return Math.ceil((exp - today) / (1000*60*60*24));
+}
+
+// --- RENDER ---
+function renderProducts() {
+  const search = document.getElementById('searchInput').value.toLowerCase().trim();
+  let filtered = products.filter(p => {
+    if (currentCategory !== 'Totes' && p.category !== currentCategory) return false;
+    if (search && !p.name.toLowerCase().includes(search)) return false;
+    return true;
+  });
+
+  // Sort: expired/critical first, then warning, then rest
+  filtered.sort((a, b) => {
+    const order = { expired: 0, critical: 1, warning: 2, ok: 3 };
+    const sa = order[getExpiryStatus(a.expiry)];
+    const sb = order[getExpiryStatus(b.expiry)];
+    if (sa !== sb) return sa - sb;
+    return a.name.localeCompare(b.name, 'ca');
+  });
+
+  const list = document.getElementById('productList');
+  const empty = document.getElementById('emptyState');
+
+  if (filtered.length === 0) {
+    list.innerHTML = '';
+    empty.classList.remove('hidden');
+  } else {
+    empty.classList.add('hidden');
+    list.innerHTML = filtered.map(p => renderCard(p)).join('');
+  }
+
+  updateSummary();
+}
+
+function renderCard(p) {
+  const status = getExpiryStatus(p.expiry);
+  const days = daysUntilExpiry(p.expiry);
+  const lowStock = p.quantity <= 2;
+
+  let borderColor = 'border-gray-100';
+  let bgColor = 'bg-white';
+  let expiryBadge = '';
+  let nameClass = 'text-gray-800';
+
+  if (status === 'expired') {
+    borderColor = 'border-red-400';
+    bgColor = 'bg-red-50';
+    expiryBadge = `<span class="inline-block bg-red-700 text-white text-xs font-bold px-2 py-0.5 rounded-full ml-1">CADUCAT</span>`;
+    nameClass = 'text-red-700 line-through';
+  } else if (status === 'critical') {
+    borderColor = 'border-red-300';
+    bgColor = 'bg-red-50';
+    expiryBadge = `<span class="inline-block bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full ml-1">${days} dies</span>`;
+  } else if (status === 'warning') {
+    borderColor = 'border-orange-300';
+    bgColor = 'bg-orange-50';
+    expiryBadge = `<span class="inline-block bg-orange-400 text-white text-xs font-bold px-2 py-0.5 rounded-full ml-1">${days} dies</span>`;
+  }
+
+  const stockWarning = lowStock ? `<span class="text-lg" title="Poc estoc!">⚠️</span>` : '';
+
+  const emoji = CAT_EMOJI[p.category] || '📦';
+
+  return `
+    <div onclick="editProduct('${p.id}')" class="card-product ${bgColor} border-2 ${borderColor} rounded-2xl px-4 py-3 shadow-sm cursor-pointer">
+      <div class="flex items-start justify-between gap-2">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-1 flex-wrap">
+            <span class="text-lg">${emoji}</span>
+            <span class="font-extrabold text-lg ${nameClass} truncate">${escHtml(p.name)}</span>
+            ${expiryBadge}
+          </div>
+          <div class="flex items-center gap-3 mt-1 text-sm text-gray-500 font-semibold flex-wrap">
+            <span>${p.category}</span>
+            ${p.expiry ? `<span>📅 ${formatDate(p.expiry)}</span>` : ''}
+            ${p.priceSell ? `<span>💰 ${Number(p.priceSell).toFixed(2)}€</span>` : ''}
+          </div>
+        </div>
+        <div class="flex flex-col items-center ml-2 min-w-[52px]">
+          <div class="flex items-center gap-1">
+            ${stockWarning}
+            <span class="text-2xl font-extrabold ${lowStock ? 'text-red-500' : 'text-verd-700'}">${p.quantity}</span>
+          </div>
+          <span class="text-xs text-gray-400 font-bold">unitats</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function escHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function updateSummary() {
+  const total = products.length;
+  let expiring = 0;
+  let lowStock = 0;
+  products.forEach(p => {
+    const s = getExpiryStatus(p.expiry);
+    if (s === 'expired' || s === 'critical' || s === 'warning') expiring++;
+    if (p.quantity <= 2) lowStock++;
+  });
+  document.getElementById('sumTotal').textContent = total;
+  document.getElementById('sumExpiring').textContent = expiring;
+  document.getElementById('sumLowStock').textContent = lowStock;
+}
+
+// --- CATEGORY FILTER ---
+function setCategory(cat) {
+  currentCategory = cat;
+  document.querySelectorAll('.cat-btn').forEach(btn => {
+    if (btn.dataset.cat === cat) {
+      btn.className = 'cat-btn px-4 py-2 rounded-full font-bold text-base border-2 border-verd-600 bg-verd-600 text-white min-h-[44px] active:scale-95 transition';
+    } else {
+      btn.className = 'cat-btn px-4 py-2 rounded-full font-bold text-base border-2 border-verd-300 text-verd-700 bg-verd-50 min-h-[44px] active:scale-95 transition';
+    }
+  });
+  renderProducts();
+}
+
+// --- MODAL ---
+function openModal(id) {
+  document.getElementById('modal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  if (id) {
+    const p = products.find(x => x.id === id);
+    if (!p) return;
+    document.getElementById('modalTitle').textContent = 'Editar producte';
+    document.getElementById('editId').value = p.id;
+    document.getElementById('fName').value = p.name;
+    document.getElementById('fCategory').value = p.category;
+    document.getElementById('fQuantity').value = p.quantity;
+    document.getElementById('fExpiry').value = p.expiry || '';
+    document.getElementById('fPriceBuy').value = p.priceBuy || '';
+    document.getElementById('fPriceSell').value = p.priceSell || '';
+    document.getElementById('btnSave').textContent = '✅ Guardar canvis';
+    document.getElementById('btnDelete').classList.remove('hidden');
+  } else {
+    document.getElementById('modalTitle').textContent = 'Afegir producte';
+    document.getElementById('editId').value = '';
+    document.getElementById('productForm').reset();
+    document.getElementById('fQuantity').value = 1;
+    document.getElementById('btnSave').textContent = '✅ Guardar producte';
+    document.getElementById('btnDelete').classList.add('hidden');
+  }
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
+function editProduct(id) {
+  openModal(id);
+}
+
+function adjustQty(delta) {
+  const input = document.getElementById('fQuantity');
+  let val = parseInt(input.value) || 0;
+  val = Math.max(0, val + delta);
+  input.value = val;
+}
+
+// --- SAVE ---
+function saveProduct(e) {
+  e.preventDefault();
+  const id = document.getElementById('editId').value;
+  const data = {
+    id: id || genId(),
+    name: document.getElementById('fName').value.trim(),
+    category: document.getElementById('fCategory').value,
+    quantity: parseInt(document.getElementById('fQuantity').value) || 0,
+    expiry: document.getElementById('fExpiry').value || '',
+    priceBuy: parseFloat(document.getElementById('fPriceBuy').value) || 0,
+    priceSell: parseFloat(document.getElementById('fPriceSell').value) || 0,
+  };
+
+  if (id) {
+    const idx = products.findIndex(p => p.id === id);
+    if (idx !== -1) products[idx] = data;
+    showToast('Producte actualitzat ✅');
+  } else {
+    products.push(data);
+    showToast('Producte afegit ✅');
+  }
+
+  saveToStorage();
+  closeModal();
+  renderProducts();
+}
+
+// --- DELETE ---
+function deleteProduct() {
+  const id = document.getElementById('editId').value;
+  if (!id) return;
+  const p = products.find(x => x.id === id);
+  deleteTargetId = id;
+  document.getElementById('confirmName').textContent = p ? p.name : '';
+  document.getElementById('confirmModal').classList.remove('hidden');
+}
+
+function confirmDelete() {
+  if (deleteTargetId) {
+    products = products.filter(p => p.id !== deleteTargetId);
+    saveToStorage();
+    showToast('Producte esborrat 🗑️');
+    deleteTargetId = null;
+  }
+  closeConfirm();
+  closeModal();
+  renderProducts();
+}
+
+function closeConfirm() {
+  document.getElementById('confirmModal').classList.add('hidden');
+  deleteTargetId = null;
+}
+
+// --- TOAST ---
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.remove('hidden');
+  t.style.opacity = '1';
+  setTimeout(() => {
+    t.style.opacity = '0';
+    setTimeout(() => t.classList.add('hidden'), 300);
+  }, 2000);
+}
+
+// --- CSV EXPORT ---
+function exportCSV() {
+  if (products.length === 0) { showToast('No hi ha productes per exportar'); return; }
+  const headers = ['Nom','Categoria','Quantitat','Caducitat','Preu Compra','Preu Venda'];
+  const rows = products.map(p => [
+    '"' + p.name.replace(/"/g, '""') + '"',
+    p.category,
+    p.quantity,
+    p.expiry || '',
+    p.priceBuy || '',
+    p.priceSell || ''
+  ]);
+  const csv = [headers.join(';'), ...rows.map(r => r.join(';'))].join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const date = new Date().toISOString().split('T')[0];
+  a.href = url;
+  a.download = `inventari_botigaCris_${date}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Arxiu CSV exportat 📤');
+}
+
+// --- CSV IMPORT ---
+function importCSV(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const text = e.target.result;
+      const lines = text.split('\n').filter(l => l.trim());
+      if (lines.length < 2) { showToast('Arxiu buit o invàlid'); return; }
+
+      const imported = [];
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(';').map(c => c.replace(/^"|"$/g, '').trim());
+        if (cols.length < 2) continue;
+        imported.push({
+          id: genId(),
+          name: cols[0] || 'Sense nom',
+          category: cols[1] || 'Altres',
+          quantity: parseInt(cols[2]) || 0,
+          expiry: cols[3] || '',
+          priceBuy: parseFloat(cols[4]) || 0,
+          priceSell: parseFloat(cols[5]) || 0,
+        });
+      }
+
+      if (imported.length === 0) { showToast('Cap producte trobat a l\'arxiu'); return; }
+
+      products = imported;
+      saveToStorage();
+      renderProducts();
+      showToast(`${imported.length} productes importats 📥`);
+    } catch (err) {
+      showToast('Error llegint l\'arxiu');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+// --- QUICK STOCK ADJUSTMENT (from list) ---
+// Long press to open quick quantity adjustment
+let longPressTimer = null;
+
+// --- INIT ---
+document.addEventListener('DOMContentLoaded', () => {
+  loadProducts();
+  renderProducts();
+});
+
+// PWA: Register service worker if available (optional, for offline support)
+if ('serviceWorker' in navigator) {
+  // Only register if sw.js exists - graceful fallback
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>

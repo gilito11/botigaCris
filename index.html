@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="ca" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>La Botiga de la Cris - Alimentació i Cosmètica Bio a Lleida</title>
+    <meta name="description" content="La Botiga de la Cris: la teva botiga de barri a Lleida amb productes bio, cosmètica natural, alimentació ecològica i tracte proper. C/ Hostal 14, Lleida.">
+    <meta name="keywords" content="botiga bio Lleida, cosmètica natural, alimentació ecològica, productes orgànics, herbolari Lleida">
+    <meta name="author" content="La Botiga de la Cris">
+    <meta name="robots" content="index, follow">
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="La Botiga de la Cris - Alimentació i Cosmètica Bio a Lleida">
+    <meta property="og:description" content="Botiga de barri amb productes bio, cosmètica natural i alimentació ecològica. Tracte proper i personalitzat al centre de Lleida.">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="ca_ES">
+    <meta property="og:url" content="https://labotigadelacris.cat">
+    <meta property="og:site_name" content="La Botiga de la Cris">
+
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌿</text></svg>">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cream: '#FDF8F0',
+                        'cream-dark': '#F5EDE0',
+                        sage: {
+                            50: '#F0F5F0',
+                            100: '#DDE8DD',
+                            200: '#B8D4B8',
+                            300: '#8FBA8F',
+                            400: '#6A9E6A',
+                            500: '#4A7C4A',
+                            600: '#3D6B3D',
+                            700: '#2F5A2F',
+                            800: '#244824',
+                            900: '#1A361A',
+                        },
+                        earth: {
+                            100: '#F0E6D6',
+                            200: '#E0D0B8',
+                            300: '#C4A882',
+                            400: '#A68B5B',
+                            500: '#8B7042',
+                            600: '#6E5830',
+                            700: '#5A4726',
+                            800: '#45361D',
+                        },
+                    },
+                    fontFamily: {
+                        display: ['Playfair Display', 'Georgia', 'serif'],
+                        body: ['Open Sans', 'system-ui', 'sans-serif'],
+                    },
+                },
+            },
+        }
+    </script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap" rel="stylesheet">
+
+    <!-- Schema.org LocalBusiness -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "LocalBusiness",
+        "@id": "https://labotigadelacris.cat",
+        "name": "La Botiga de la Cris",
+        "description": "Botiga de barri amb productes bio, cosmètica natural i alimentació ecològica a Lleida.",
+        "image": "",
+        "telephone": "+34973XXXXXX",
+        "address": {
+            "@type": "PostalAddress",
+            "streetAddress": "C/ Hostal 14",
+            "addressLocality": "Lleida",
+            "postalCode": "25001",
+            "addressRegion": "Catalunya",
+            "addressCountry": "ES"
+        },
+        "geo": {
+            "@type": "GeoCoordinates",
+            "latitude": 41.6148,
+            "longitude": 0.6270
+        },
+        "openingHoursSpecification": [
+            {
+                "@type": "OpeningHoursSpecification",
+                "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"],
+                "opens": "09:30",
+                "closes": "13:30"
+            },
+            {
+                "@type": "OpeningHoursSpecification",
+                "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"],
+                "opens": "17:00",
+                "closes": "20:00"
+            },
+            {
+                "@type": "OpeningHoursSpecification",
+                "dayOfWeek": "Saturday",
+                "opens": "10:00",
+                "closes": "13:30"
+            }
+        ],
+        "sameAs": [
+            "https://www.instagram.com/labotigadelacris"
+        ],
+        "priceRange": "$$",
+        "currenciesAccepted": "EUR",
+        "paymentAccepted": "Cash, Credit Card"
+    }
+    </script>
+
+    <style>
+        /* Scroll-triggered animations */
+        .fade-up {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+        }
+        .fade-up.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .fade-up-delay-1 { transition-delay: 0.1s; }
+        .fade-up-delay-2 { transition-delay: 0.2s; }
+        .fade-up-delay-3 { transition-delay: 0.3s; }
+        .fade-up-delay-4 { transition-delay: 0.35s; }
+        .fade-up-delay-5 { transition-delay: 0.4s; }
+
+        /* Hero leaf animation */
+        @keyframes sway {
+            0%, 100% { transform: rotate(-5deg); }
+            50% { transform: rotate(5deg); }
+        }
+        .leaf-sway {
+            animation: sway 4s ease-in-out infinite;
+            display: inline-block;
+        }
+
+        /* Subtle pulse for WhatsApp button */
+        @keyframes pulse-soft {
+            0%, 100% { box-shadow: 0 4px 15px rgba(37, 211, 102, 0.3); }
+            50% { box-shadow: 0 4px 25px rgba(37, 211, 102, 0.5); }
+        }
+        .whatsapp-pulse {
+            animation: pulse-soft 2.5s ease-in-out infinite;
+        }
+
+        /* Hero background pattern */
+        .hero-pattern {
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%234A7C4A' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        /* Smooth nav background transition */
+        .nav-scrolled {
+            background-color: rgba(253, 248, 240, 0.97) !important;
+            box-shadow: 0 1px 10px rgba(0,0,0,0.08);
+        }
+
+        /* Product card hover */
+        .product-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .product-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+        }
+
+        /* Decorative divider */
+        .divider-leaf::after {
+            content: '🌿';
+            display: block;
+            text-align: center;
+            font-size: 1.25rem;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+
+<body class="font-body text-earth-800 bg-cream">
+
+    <!-- Navigation -->
+    <nav id="navbar" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300 bg-transparent">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6">
+            <div class="flex items-center justify-between h-16 sm:h-20">
+                <a href="#inici" class="font-display text-lg sm:text-xl font-semibold text-sage-700 hover:text-sage-800 transition-colors">
+                    La Botiga de la Cris
+                </a>
+                <!-- Mobile menu button -->
+                <button id="menu-toggle" class="sm:hidden p-2 rounded-lg text-sage-600 hover:bg-sage-50 transition-colors" aria-label="Obrir menú">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path id="menu-icon" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                </button>
+                <!-- Desktop nav -->
+                <div class="hidden sm:flex items-center gap-6 text-sm font-medium text-earth-600">
+                    <a href="#sobre" class="hover:text-sage-600 transition-colors">Sobre nosaltres</a>
+                    <a href="#productes" class="hover:text-sage-600 transition-colors">Productes</a>
+                    <a href="#horari" class="hover:text-sage-600 transition-colors">Horari</a>
+                    <a href="#contacte" class="hover:text-sage-600 transition-colors">Contacte</a>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile menu -->
+        <div id="mobile-menu" class="hidden sm:hidden bg-cream/97 border-t border-sage-100">
+            <div class="px-4 py-3 space-y-2">
+                <a href="#sobre" class="block py-2 text-earth-600 hover:text-sage-600 transition-colors font-medium">Sobre nosaltres</a>
+                <a href="#productes" class="block py-2 text-earth-600 hover:text-sage-600 transition-colors font-medium">Productes</a>
+                <a href="#horari" class="block py-2 text-earth-600 hover:text-sage-600 transition-colors font-medium">Horari</a>
+                <a href="#contacte" class="block py-2 text-earth-600 hover:text-sage-600 transition-colors font-medium">Contacte</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="inici" class="hero-pattern min-h-screen flex items-center justify-center relative overflow-hidden">
+        <!-- Decorative background circles -->
+        <div class="absolute top-20 right-[-60px] w-72 h-72 bg-sage-200/20 rounded-full blur-3xl"></div>
+        <div class="absolute bottom-20 left-[-40px] w-56 h-56 bg-earth-200/20 rounded-full blur-3xl"></div>
+
+        <div class="text-center px-6 py-20 sm:py-0 max-w-3xl mx-auto relative">
+            <!-- Leaf icon -->
+            <div class="mb-6">
+                <svg class="leaf-sway w-16 h-16 sm:w-20 sm:h-20 mx-auto text-sage-500" viewBox="0 0 64 64" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M32 4C32 4 12 16 12 36C12 46 18 54 28 58C28 58 28 40 32 28C36 40 36 58 36 58C46 54 52 46 52 36C52 16 32 4 32 4Z" opacity="0.85"/>
+                    <path d="M32 28V58" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" fill="none"/>
+                    <path d="M32 38L24 32" stroke="rgba(255,255,255,0.3)" stroke-width="1" fill="none"/>
+                    <path d="M32 44L40 38" stroke="rgba(255,255,255,0.3)" stroke-width="1" fill="none"/>
+                </svg>
+            </div>
+
+            <h1 class="font-display text-4xl sm:text-5xl md:text-6xl font-bold text-sage-800 mb-4 leading-tight">
+                La Botiga<br class="sm:hidden"> de la Cris
+            </h1>
+            <p class="text-lg sm:text-xl text-earth-500 font-light mb-2 font-display italic">
+                Alimentació i cosmètica bio
+            </p>
+            <p class="text-base sm:text-lg text-earth-400 mb-10 max-w-md mx-auto leading-relaxed">
+                Productes naturals, ecològics i de proximitat al cor de Lleida
+            </p>
+
+            <div class="flex flex-col sm:flex-row gap-3 justify-center items-center">
+                <a href="#productes" class="inline-flex items-center gap-2 bg-sage-600 text-white px-7 py-3 rounded-full font-medium hover:bg-sage-700 transition-all shadow-md hover:shadow-lg text-sm sm:text-base">
+                    Descobreix els nostres productes
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </a>
+                <a href="#horari" class="inline-flex items-center gap-2 text-sage-600 border border-sage-300 px-7 py-3 rounded-full font-medium hover:bg-sage-50 transition-all text-sm sm:text-base">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Horari d'obertura
+                </a>
+            </div>
+        </div>
+
+        <!-- Scroll indicator -->
+        <div class="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
+            <svg class="w-5 h-5 text-sage-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
+        </div>
+    </section>
+
+    <!-- Sobre nosaltres -->
+    <section id="sobre" class="py-20 sm:py-28 bg-white">
+        <div class="max-w-4xl mx-auto px-6">
+            <div class="fade-up text-center mb-12">
+                <h2 class="font-display text-3xl sm:text-4xl font-semibold text-sage-800 mb-3">Sobre nosaltres</h2>
+                <div class="w-16 h-0.5 bg-sage-400 mx-auto"></div>
+            </div>
+
+            <div class="fade-up max-w-2xl mx-auto text-center">
+                <p class="text-lg sm:text-xl leading-relaxed text-earth-600 mb-6 font-light">
+                    Som una <strong class="font-medium text-earth-700">botiga de barri</strong> al centre de Lleida, amb anys d'experiència oferint els millors productes bio i naturals.
+                </p>
+                <p class="text-base sm:text-lg leading-relaxed text-earth-500 mb-8">
+                    A <em>La Botiga de la Cris</em> trobareu alimentació ecològica, cosmètica natural, suplements, infusions i molt més. Sempre amb un <strong class="font-medium text-earth-600">tracte proper i personalitzat</strong>, assessorant-vos per trobar el que necessiteu.
+                </p>
+
+                <div class="flex flex-wrap justify-center gap-4 sm:gap-8 text-sm text-earth-500">
+                    <div class="flex items-center gap-2">
+                        <span class="w-8 h-8 rounded-full bg-sage-100 flex items-center justify-center text-lg">🌱</span>
+                        <span>Productes ecològics</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-8 h-8 rounded-full bg-sage-100 flex items-center justify-center text-lg">🤝</span>
+                        <span>Tracte personalitzat</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-8 h-8 rounded-full bg-sage-100 flex items-center justify-center text-lg">📍</span>
+                        <span>Productes locals</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Productes -->
+    <section id="productes" class="py-20 sm:py-28 bg-cream">
+        <div class="max-w-5xl mx-auto px-6">
+            <div class="fade-up text-center mb-14">
+                <h2 class="font-display text-3xl sm:text-4xl font-semibold text-sage-800 mb-3">Els nostres productes</h2>
+                <div class="w-16 h-0.5 bg-sage-400 mx-auto mb-4"></div>
+                <p class="text-earth-500 max-w-lg mx-auto">Seleccionem amb cura cada producte per oferir-vos la millor qualitat natural</p>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6">
+                <!-- Alimentació bio -->
+                <div class="fade-up fade-up-delay-1 product-card bg-white rounded-2xl p-6 sm:p-8 text-center shadow-sm border border-sage-50">
+                    <div class="text-4xl sm:text-5xl mb-4">🥗</div>
+                    <h3 class="font-display text-base sm:text-lg font-semibold text-sage-800 mb-2">Alimentació bio</h3>
+                    <p class="text-xs sm:text-sm text-earth-400 leading-relaxed">Cereals, llegums, pastes, olis, conserves i molt més, tot ecològic</p>
+                </div>
+
+                <!-- Cosmètica natural -->
+                <div class="fade-up fade-up-delay-2 product-card bg-white rounded-2xl p-6 sm:p-8 text-center shadow-sm border border-sage-50">
+                    <div class="text-4xl sm:text-5xl mb-4">🧴</div>
+                    <h3 class="font-display text-base sm:text-lg font-semibold text-sage-800 mb-2">Cosmètica natural</h3>
+                    <p class="text-xs sm:text-sm text-earth-400 leading-relaxed">Cremes, sèrums, maquillatge natural i cura de la pell</p>
+                </div>
+
+                <!-- Suplements -->
+                <div class="fade-up fade-up-delay-3 product-card bg-white rounded-2xl p-6 sm:p-8 text-center shadow-sm border border-sage-50">
+                    <div class="text-4xl sm:text-5xl mb-4">💊</div>
+                    <h3 class="font-display text-base sm:text-lg font-semibold text-sage-800 mb-2">Suplements</h3>
+                    <p class="text-xs sm:text-sm text-earth-400 leading-relaxed">Vitamines, minerals, probiotics i complements naturals</p>
+                </div>
+
+                <!-- Infusions i tès -->
+                <div class="fade-up fade-up-delay-1 product-card bg-white rounded-2xl p-6 sm:p-8 text-center shadow-sm border border-sage-50">
+                    <div class="text-4xl sm:text-5xl mb-4">🍵</div>
+                    <h3 class="font-display text-base sm:text-lg font-semibold text-sage-800 mb-2">Infusions i tès</h3>
+                    <p class="text-xs sm:text-sm text-earth-400 leading-relaxed">Gran varietat d'infusions, tès i plantes medicinals a granel</p>
+                </div>
+
+                <!-- Productes locals -->
+                <div class="fade-up fade-up-delay-2 product-card bg-white rounded-2xl p-6 sm:p-8 text-center shadow-sm border border-sage-50">
+                    <div class="text-4xl sm:text-5xl mb-4">🏡</div>
+                    <h3 class="font-display text-base sm:text-lg font-semibold text-sage-800 mb-2">Productes locals</h3>
+                    <p class="text-xs sm:text-sm text-earth-400 leading-relaxed">Mel, oli, fruita seca i productes de proximitat de Ponent</p>
+                </div>
+
+                <!-- Higiene natural -->
+                <div class="fade-up fade-up-delay-3 product-card bg-white rounded-2xl p-6 sm:p-8 text-center shadow-sm border border-sage-50">
+                    <div class="text-4xl sm:text-5xl mb-4">🪥</div>
+                    <h3 class="font-display text-base sm:text-lg font-semibold text-sage-800 mb-2">Higiene natural</h3>
+                    <p class="text-xs sm:text-sm text-earth-400 leading-relaxed">Sabons, xampús, dentifrici i productes d'higiene ecològics</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Horari -->
+    <section id="horari" class="py-20 sm:py-28 bg-white">
+        <div class="max-w-3xl mx-auto px-6">
+            <div class="fade-up text-center mb-12">
+                <h2 class="font-display text-3xl sm:text-4xl font-semibold text-sage-800 mb-3">Horari d'obertura</h2>
+                <div class="w-16 h-0.5 bg-sage-400 mx-auto"></div>
+            </div>
+
+            <div class="fade-up bg-cream rounded-2xl p-6 sm:p-10 max-w-lg mx-auto shadow-sm border border-earth-100">
+                <!-- Status badge -->
+                <div id="shop-status" class="text-center mb-6">
+                    <!-- Filled by JS -->
+                </div>
+
+                <div class="space-y-4">
+                    <!-- Dilluns a Divendres -->
+                    <div class="flex items-start justify-between py-3 border-b border-earth-100">
+                        <div>
+                            <p class="font-medium text-earth-700 text-sm sm:text-base">Dilluns a Divendres</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sage-700 font-semibold text-sm sm:text-base">9:30 - 13:30</p>
+                            <p class="text-sage-700 font-semibold text-sm sm:text-base">17:00 - 20:00</p>
+                        </div>
+                    </div>
+
+                    <!-- Dissabte -->
+                    <div class="flex items-center justify-between py-3 border-b border-earth-100">
+                        <div>
+                            <p class="font-medium text-earth-700 text-sm sm:text-base">Dissabte</p>
+                            <p class="text-xs text-earth-400">Tarda tancat</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sage-700 font-semibold text-sm sm:text-base">10:00 - 13:30</p>
+                        </div>
+                    </div>
+
+                    <!-- Diumenge -->
+                    <div class="flex items-center justify-between py-3">
+                        <p class="font-medium text-earth-700 text-sm sm:text-base">Diumenge</p>
+                        <span class="bg-earth-100 text-earth-500 text-xs font-medium px-3 py-1 rounded-full">Tancat</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Ubicació -->
+    <section id="ubicacio" class="py-20 sm:py-28 bg-cream-dark">
+        <div class="max-w-5xl mx-auto px-6">
+            <div class="fade-up text-center mb-12">
+                <h2 class="font-display text-3xl sm:text-4xl font-semibold text-sage-800 mb-3">On som</h2>
+                <div class="w-16 h-0.5 bg-sage-400 mx-auto mb-4"></div>
+                <p class="text-earth-500">Vine a visitar-nos al centre de Lleida</p>
+            </div>
+
+            <div class="fade-up grid sm:grid-cols-3 gap-6 items-start">
+                <!-- Map -->
+                <div class="sm:col-span-2 rounded-2xl overflow-hidden shadow-md border border-earth-100">
+                    <iframe
+                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2984.5!2d0.6255!3d41.6148!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x12a6c0e2e1234567%3A0x0!2sC%2F%20Hostal%2014%2C%2025001%20Lleida!5e0!3m2!1sca!2ses!4v1700000000000"
+                        width="100%"
+                        height="350"
+                        style="border:0;"
+                        allowfullscreen=""
+                        loading="lazy"
+                        referrerpolicy="no-referrer-when-downgrade"
+                        title="Ubicació de La Botiga de la Cris al mapa">
+                    </iframe>
+                </div>
+
+                <!-- Address card -->
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-earth-100">
+                    <div class="flex items-start gap-3 mb-5">
+                        <div class="w-10 h-10 rounded-full bg-sage-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <svg class="w-5 h-5 text-sage-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                        </div>
+                        <div>
+                            <p class="font-display font-semibold text-sage-800 text-lg mb-1">Adreça</p>
+                            <p class="text-earth-600 text-sm leading-relaxed">
+                                C/ Hostal 14<br>
+                                25001 Lleida
+                            </p>
+                        </div>
+                    </div>
+
+                    <a href="https://maps.google.com/?q=C/+Hostal+14,+Lleida+25001" target="_blank" rel="noopener noreferrer"
+                       class="inline-flex items-center gap-2 text-sage-600 hover:text-sage-700 text-sm font-medium transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                        Obrir a Google Maps
+                    </a>
+
+                    <hr class="my-5 border-earth-100">
+
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 rounded-full bg-sage-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <svg class="w-5 h-5 text-sage-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </div>
+                        <div>
+                            <p class="font-display font-semibold text-sage-800 mb-1">Aparcament</p>
+                            <p class="text-earth-500 text-xs leading-relaxed">Zona centre. Aparcament disponible a les proximitats.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contacte -->
+    <section id="contacte" class="py-20 sm:py-28 bg-sage-800">
+        <div class="max-w-4xl mx-auto px-6 text-center">
+            <div class="fade-up mb-12">
+                <h2 class="font-display text-3xl sm:text-4xl font-semibold text-white mb-3">Contacta'ns</h2>
+                <div class="w-16 h-0.5 bg-sage-400 mx-auto mb-4"></div>
+                <p class="text-sage-200 max-w-md mx-auto">Tens alguna consulta? Truca'ns o escriu-nos per WhatsApp. Estarem encantats d'ajudar-te!</p>
+            </div>
+
+            <div class="fade-up grid sm:grid-cols-3 gap-5 max-w-2xl mx-auto">
+                <!-- Phone -->
+                <a href="tel:+34973XXXXXX" class="group bg-sage-700/50 hover:bg-sage-700 rounded-2xl p-6 transition-all">
+                    <div class="w-14 h-14 rounded-full bg-sage-600 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                    </div>
+                    <p class="text-white font-medium text-sm mb-1">Telèfon</p>
+                    <p class="text-sage-200 text-sm">973 XX XX XX</p>
+                </a>
+
+                <!-- WhatsApp -->
+                <a href="https://wa.me/34973XXXXXX?text=Hola%20Cris!%20Tinc%20una%20consulta" target="_blank" rel="noopener noreferrer"
+                   class="group bg-sage-700/50 hover:bg-sage-700 rounded-2xl p-6 transition-all">
+                    <div class="w-14 h-14 rounded-full bg-[#25D366] flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                        <svg class="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                    </div>
+                    <p class="text-white font-medium text-sm mb-1">WhatsApp</p>
+                    <p class="text-sage-200 text-sm">Escriu-nos!</p>
+                </a>
+
+                <!-- Instagram -->
+                <a href="https://www.instagram.com/labotigadelacris" target="_blank" rel="noopener noreferrer"
+                   class="group bg-sage-700/50 hover:bg-sage-700 rounded-2xl p-6 transition-all">
+                    <div class="w-14 h-14 rounded-full bg-gradient-to-tr from-[#F58529] via-[#DD2A7B] to-[#8134AF] flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                        <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+                    </div>
+                    <p class="text-white font-medium text-sm mb-1">Instagram</p>
+                    <p class="text-sage-200 text-sm">@labotigadelacris</p>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-sage-900 py-8">
+        <div class="max-w-5xl mx-auto px-6">
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5 text-sage-400" viewBox="0 0 64 64" fill="currentColor"><path d="M32 4C32 4 12 16 12 36C12 46 18 54 28 58C28 58 28 40 32 28C36 40 36 58 36 58C46 54 52 46 52 36C52 16 32 4 32 4Z" opacity="0.85"/></svg>
+                    <span class="font-display text-sage-300 text-sm">La Botiga de la Cris</span>
+                </div>
+                <p class="text-sage-500 text-xs">
+                    &copy; 2026 La Botiga de la Cris. Tots els drets reservats.
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- WhatsApp Floating Button -->
+    <a href="https://wa.me/34973XXXXXX?text=Hola%20Cris!%20Tinc%20una%20consulta"
+       target="_blank"
+       rel="noopener noreferrer"
+       aria-label="Contactar per WhatsApp"
+       class="whatsapp-pulse fixed bottom-6 right-6 z-40 w-14 h-14 bg-[#25D366] rounded-full flex items-center justify-center shadow-lg hover:bg-[#20BD5A] transition-colors">
+        <svg class="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+    </a>
+
+    <script>
+        // Navbar scroll effect
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 50) {
+                navbar.classList.add('nav-scrolled');
+            } else {
+                navbar.classList.remove('nav-scrolled');
+            }
+        });
+
+        // Mobile menu toggle
+        const menuToggle = document.getElementById('menu-toggle');
+        const mobileMenu = document.getElementById('mobile-menu');
+        menuToggle.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+        });
+        // Close mobile menu on link click
+        mobileMenu.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', () => {
+                mobileMenu.classList.add('hidden');
+            });
+        });
+
+        // Intersection Observer for scroll animations
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, {
+            threshold: 0.15,
+            rootMargin: '0px 0px -40px 0px'
+        });
+
+        document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+
+        // Shop open/closed status
+        function getShopStatus() {
+            const now = new Date();
+            const day = now.getDay(); // 0=Sun, 1=Mon...6=Sat
+            const hours = now.getHours();
+            const minutes = now.getMinutes();
+            const time = hours * 60 + minutes;
+
+            let isOpen = false;
+            let statusText = '';
+
+            if (day === 0) {
+                statusText = 'Avui diumenge estem tancats';
+            } else if (day === 6) {
+                if (time >= 600 && time < 810) { // 10:00 - 13:30
+                    isOpen = true;
+                    statusText = 'Obert ara \u00b7 Tanquem a les 13:30';
+                } else if (time < 600) {
+                    statusText = 'Tancat ara \u00b7 Obrim a les 10:00';
+                } else {
+                    statusText = 'Tancat \u00b7 Obrim dilluns a les 9:30';
+                }
+            } else { // Mon-Fri
+                if (time >= 570 && time < 810) { // 9:30 - 13:30
+                    isOpen = true;
+                    statusText = 'Obert ara \u00b7 Tanquem a les 13:30';
+                } else if (time >= 1020 && time < 1200) { // 17:00 - 20:00
+                    isOpen = true;
+                    statusText = 'Obert ara \u00b7 Tanquem a les 20:00';
+                } else if (time < 570) {
+                    statusText = 'Tancat ara \u00b7 Obrim a les 9:30';
+                } else if (time >= 810 && time < 1020) {
+                    statusText = 'Tancat ara \u00b7 Obrim a les 17:00';
+                } else {
+                    if (day === 5) {
+                        statusText = 'Tancat \u00b7 Obrim dissabte a les 10:00';
+                    } else {
+                        statusText = 'Tancat \u00b7 Obrim dem\u00e0 a les 9:30';
+                    }
+                }
+            }
+
+            const container = document.getElementById('shop-status');
+            container.innerHTML = `
+                <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${
+                    isOpen
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-earth-100 text-earth-600'
+                }">
+                    <span class="w-2 h-2 rounded-full ${isOpen ? 'bg-green-500' : 'bg-earth-400'}"></span>
+                    ${statusText}
+                </span>
+            `;
+        }
+        getShopStatus();
+        setInterval(getShopStatus, 60000);
+    </script>
+</body>
+</html>
