@@ -837,15 +837,16 @@ function parseNumberWord(text) {
 }
 
 function extractQuantity(text) {
-  // Look for quantity patterns: number + "unitats"/"unitat", or just a number
-  const patterns = [
-    /(\d+)\s*unitat/i,
-    /\b(\d+)\b/,
-  ];
-  for (const p of patterns) {
-    const m = text.match(p);
-    if (m) return parseInt(m[1]);
-  }
+  // Check for "una"/"un" as quantity word early (common in speech)
+  if (/\buna\b/i.test(quantityZone) || /^(?:afegeix|treu|actualitza)\s+un\b/i.test(text)) return 1;
+
+  // Look for explicit quantity patterns (number + "unitats"/"unitat")
+  const explicitQty = quantityZone.match(/(\d+)\s*unitat/i);
+  if (explicitQty) return parseInt(explicitQty[1]);
+
+  // Look for standalone numbers that are NOT part of product names (exclude numbers followed by g/kg/ml/l/cl)
+  const standaloneNum = quantityZone.match(/\b(\d+)\b(?!\s*(?:g|kg|ml|l|cl)\b)/i);
+  if (standaloneNum) return parseInt(standaloneNum[1]);
 
   // Try Catalan number words before "unitat(s)"
   const unitatPattern = /([\w\s-]+?)\s*unitat/i;
@@ -872,7 +873,7 @@ function extractQuantity(text) {
 
 function extractExpiry(text) {
   // Look for "caduca el X de Y" or "caducitat X de Y"
-  const expiryPattern = /(?:caduca|caducitat)\s+(?:el\s+|l')?(.+)/i;
+  const expiryPattern = /(?:que\s+)?(?:caduca|caducitat)\s+(?:el\s+|l')?(.+)/i;
   const m = text.match(expiryPattern);
   if (!m) return '';
 
@@ -952,10 +953,10 @@ function extractAction(text) {
 function extractProductName(text) {
   let cleaned = text;
 
-  // Remove action words at the start
-  cleaned = cleaned.replace(/^(afegeix|actualitza|treu)\s+/i, '');
+  // Remove action words at the start (including "afegeix una", "afegeix un")
+  cleaned = cleaned.replace(/^(afegeix|actualitza|treu)\s+(una?\s+)?/i, '');
 
-  // Remove quantity phrases (number + unitats/unitat)
+  // Remove quantity phrases (number + unitats/unitat) but NOT numbers followed by g/kg/ml
   cleaned = cleaned.replace(/\b\d+\s*unitats?\b/gi, '');
   // Remove Catalan number words followed by "unitat(s)"
   const sortedNums = Object.keys(CATALAN_NUMBERS).sort((a, b) => b.length - a.length);
@@ -964,8 +965,8 @@ function extractProductName(text) {
     cleaned = cleaned.replace(re, '');
   }
 
-  // Remove expiry phrases
-  cleaned = cleaned.replace(/(?:caduca|caducitat)\s+.*/i, '');
+  // Remove expiry phrases (with optional "que" before)
+  cleaned = cleaned.replace(/(?:que\s+)?(?:caduca|caducitat)\s+.*/i, '');
 
   // Remove category mentions at the end
   cleaned = cleaned.replace(/\s+(?:categoria|de la categoria)\s+\w+\s*$/i, '');
