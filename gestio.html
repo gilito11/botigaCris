@@ -713,7 +713,7 @@ function initVoice() {
       }
     } else if (interim) {
       lastInterim = interim;
-      // Fallback: if isFinal never fires, use interim after 2.5s of silence
+      // Fallback: if isFinal never fires, use interim after 4s of no new speech
       clearTimeout(interimTimeout);
       interimTimeout = setTimeout(() => {
         if (voiceState === VoiceState.LISTENING && lastInterim) {
@@ -725,7 +725,7 @@ function initVoice() {
           }
           lastInterim = '';
         }
-      }, 2500);
+      }, 4000);
     }
   };
 
@@ -889,6 +889,11 @@ function parseNumberWord(text) {
 }
 
 function extractQuantity(text) {
+  // Define quantityZone first - text before "caduca" to avoid confusing date numbers
+  let quantityZone = text;
+  const caducaIdx = text.indexOf('caduca');
+  if (caducaIdx > -1) quantityZone = text.substring(0, caducaIdx);
+
   // Check for "una"/"un" as quantity word early (common in speech)
   if (/\buna\b/i.test(quantityZone) || /^(?:afegeix|treu|actualitza)\s+un\b/i.test(text)) return 1;
 
@@ -902,17 +907,11 @@ function extractQuantity(text) {
 
   // Try Catalan number words before "unitat(s)"
   const unitatPattern = /([\w\s-]+?)\s*unitat/i;
-  const um = text.match(unitatPattern);
+  const um = quantityZone.match(unitatPattern);
   if (um) {
     const num = parseNumberWord(um[1]);
     if (num !== null) return num;
   }
-
-  // Try any number word in the text (scan from right to left to get the quantity, not the date)
-  // But avoid picking up date-related numbers - extract quantity from before "caduca"
-  let quantityZone = text;
-  const caducaIdx = text.indexOf('caduca');
-  if (caducaIdx > -1) quantityZone = text.substring(0, caducaIdx);
 
   // Sort by value descending to match longer phrases first (e.g., "vint-i-cinc" before "cinc")
   const sortedEntries = Object.entries(CATALAN_NUMBERS).sort((a, b) => b[0].length - a[0].length);
