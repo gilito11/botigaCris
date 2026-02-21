@@ -687,6 +687,9 @@ function initVoice() {
     setVoiceState(VoiceState.LISTENING);
   };
 
+  let lastInterim = '';
+  let interimTimeout = null;
+
   recognition.onresult = (event) => {
     let interim = '';
     let final = '';
@@ -699,28 +702,62 @@ function initVoice() {
     }
     const display = final || interim;
     document.getElementById('voiceText').textContent = display;
+
     if (final) {
-      recognition.stop();
-      processVoiceCommand(final.trim().toLowerCase());
+      clearTimeout(interimTimeout);
+      try { recognition.stop(); } catch(e) {}
+      try {
+        processVoiceCommand(final.trim().toLowerCase());
+      } catch(e) {
+        showVoiceError('Error processant: ' + e.message);
+      }
+    } else if (interim) {
+      lastInterim = interim;
+      // Fallback: if isFinal never fires, use interim after 2.5s of silence
+      clearTimeout(interimTimeout);
+      interimTimeout = setTimeout(() => {
+        if (voiceState === VoiceState.LISTENING && lastInterim) {
+          try { recognition.stop(); } catch(e) {}
+          try {
+            processVoiceCommand(lastInterim.trim().toLowerCase());
+          } catch(e) {
+            showVoiceError('Error processant: ' + e.message);
+          }
+          lastInterim = '';
+        }
+      }, 2500);
     }
   };
 
   recognition.onerror = (event) => {
+    clearTimeout(interimTimeout);
     if (event.error === 'not-allowed') {
       showVoiceError('Permís de micròfon denegat. Activa\'l a la configuració del navegador.');
     } else if (event.error === 'no-speech') {
       showVoiceError('No s\'ha detectat cap veu. Torna a provar.');
     } else if (event.error === 'aborted') {
       setVoiceState(VoiceState.IDLE);
+      hideVoiceOverlay();
     } else {
-      showVoiceError('Error de reconeixement: ' + event.error);
+      showVoiceError('Error: ' + event.error);
     }
   };
 
   recognition.onend = () => {
+    // If we're still in LISTENING state (no result processed), use last interim
     if (voiceState === VoiceState.LISTENING) {
-      setVoiceState(VoiceState.IDLE);
-      hideVoiceOverlay();
+      clearTimeout(interimTimeout);
+      if (lastInterim) {
+        try {
+          processVoiceCommand(lastInterim.trim().toLowerCase());
+        } catch(e) {
+          showVoiceError('Error processant: ' + e.message);
+        }
+        lastInterim = '';
+      } else {
+        setVoiceState(VoiceState.IDLE);
+        hideVoiceOverlay();
+      }
     }
   };
 }
@@ -806,8 +843,23 @@ function showVoiceSuccess(msg) {
   document.getElementById('voiceStatus').textContent = msg;
   document.getElementById('voiceStatus').style.color = '#4ade80';
   document.getElementById('voiceDots').style.display = 'none';
-  setTimeout(() => { hideVoiceOverlay(); }, 2000);
+  setTimeout(() => { setVoiceState(VoiceState.IDLE); hideVoiceOverlay(); }, 2000);
 }
+
+// Safety timeout: never leave overlay hanging more than 8 seconds
+let overlayTimeout = null;
+const originalShowOverlay = showVoiceOverlay;
+showVoiceOverlay = function() {
+  originalShowOverlay();
+  clearTimeout(overlayTimeout);
+  overlayTimeout = setTimeout(() => {
+    if (voiceState !== VoiceState.IDLE) {
+      try { recognition.stop(); } catch(e) {}
+      setVoiceState(VoiceState.IDLE);
+      hideVoiceOverlay();
+    }
+  }, 8000);
+};
 
 // --- PARSING ---
 function parseNumberWord(text) {
