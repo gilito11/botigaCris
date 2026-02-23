@@ -788,7 +788,9 @@ const CATALAN_MONTHS = {
 const CATEGORIES = ['Alimentació','Cosmètica','Suplements','Infusions','Higiene','Altres'];
 const CATEGORY_KEYWORDS = {
   'alimentació':'Alimentació','alimentacio':'Alimentació','menjar':'Alimentació',
-  'xocolata':'Alimentació','mel':'Alimentació','pa':'Alimentació','arròs':'Alimentació','arros':'Alimentació','farina':'Alimentació','oli':'Alimentació',
+  'xocolata':'Alimentació','chocolate':'Alimentació','cacau':'Alimentació','cacao':'Alimentació',
+  'mel':'Alimentació','pa':'Alimentació','arròs':'Alimentació','arros':'Alimentació','farina':'Alimentació','oli':'Alimentació',
+  'llet':'Alimentació','sucre':'Alimentació','pasta':'Alimentació','cereals':'Alimentació','galletes':'Alimentació',
   'cosmètica':'Cosmètica','cosmetica':'Cosmètica','crema':'Cosmètica',
   'suplements':'Suplements','suplement':'Suplements','vitamina':'Suplements',
   'infusions':'Infusions','infusió':'Infusions','infusio':'Infusions','te':'Infusions','camamilla':'Infusions',
@@ -981,6 +983,8 @@ function showVoiceSuccess(msg) {
 // Normalize speech-to-text variations before parsing
 function normalizeVoiceText(text) {
   let t = text.toLowerCase().trim();
+  // Strip punctuation that speech recognition might add
+  t = t.replace(/[.,;:!?¿¡"""''()]/g, '');
   t = t.replace(/\s+/g, ' ');
   // "vint i tres" → "vint-i-tres"
   t = t.replace(/\bvint\s+i\s+(un|una|dos|dues|tres|quatre|cinc|sis|set|vuit|nou)\b/g, 'vint-i-$1');
@@ -1063,7 +1067,7 @@ function parseNumberWord(text) {
 function extractQuantity(text) {
   // Zone before expiry keywords to avoid confusing date numbers with quantity
   let zone = text;
-  const caducaIdx = text.search(/\b(?:que\s+)?(?:caduca|caduqui|de\s+caducitat|caducitat)\b/i);
+  const caducaIdx = text.search(/\b(?:que\s+)?(?:caduca|caduqui|caduque|de\s+caducitat|caducitat)\b/i);
   if (caducaIdx > 0) zone = text.substring(0, caducaIdx);
 
   // Remove digit-based weight measures
@@ -1121,7 +1125,7 @@ function extractQuantity(text) {
 }
 
 function extractExpiry(text) {
-  const expiryPattern = /(?:que\s+)?(?:caduca|caduqui|de\s+caducitat|caducitat)\s+(?:el\s+|l')?(.+)/i;
+  const expiryPattern = /(?:que\s+)?(?:caduca|caduqui|caduque|data\s+de\s+caducitat|de\s+caducitat|caducitat)\s+(?:el\s+|al\s+|l['']?\s*)?(.+)/i;
   const m = text.match(expiryPattern);
   if (!m) return '';
   return parseCatalanDate(m[1].trim());
@@ -1220,7 +1224,7 @@ function extractProductName(text) {
   }
 
   // Remove expiry phrases
-  cleaned = cleaned.replace(/(?:que\s+)?(?:caduca|caduqui|de\s+caducitat|caducitat)\s+.*/i, '');
+  cleaned = cleaned.replace(/(?:que\s+)?(?:caduca|caduqui|caduque|data\s+de\s+caducitat|de\s+caducitat|caducitat)\s+.*/i, '');
 
   // Remove category mentions at the end
   cleaned = cleaned.replace(/\s+(?:categoria|de la categoria)\s+\w+\s*$/i, '');
@@ -1238,6 +1242,29 @@ function extractProductName(text) {
   return cleaned;
 }
 
+const FUZZY_STOP_WORDS = new Set([
+  'de','del','da','la','el','les','els','un','una','uns','unes',
+  'al','a','amb','per','i','o','en','que','com','ses','sa'
+]);
+const FUZZY_WEIGHT_WORDS = new Set([
+  'grams','gram','quilos','quilo','quilograms','quilogram',
+  'litres','litre','millilitres','millilitre',
+  'kg','g','ml','l','cl','cents','cent'
+]);
+
+function getSignificantWords(text) {
+  return text.toLowerCase().split(/[\s]+/).filter(w => {
+    if (w.length <= 2) return false;
+    if (FUZZY_STOP_WORDS.has(w)) return false;
+    if (FUZZY_WEIGHT_WORDS.has(w)) return false;
+    // Filter compound weight words like "tres-cents", "cinc-cents"
+    if (/^\w+-cents$/.test(w)) return false;
+    // Filter pure number words
+    if (CATALAN_NUMBERS[w] !== undefined) return false;
+    return true;
+  });
+}
+
 function findExistingProduct(name) {
   if (!name) return null;
   const lower = name.toLowerCase();
@@ -1246,24 +1273,27 @@ function findExistingProduct(name) {
   let found = products.find(p => p.name.toLowerCase() === lower);
   if (found) return found;
 
-  // Contains match
+  // Contains match (full name must be substring)
   found = products.find(p => p.name.toLowerCase().includes(lower) || lower.includes(p.name.toLowerCase()));
   if (found) return found;
 
-  // Fuzzy: check if 70%+ of words match
-  const words = lower.split(/\s+/);
-  if (words.length >= 2) {
+  // Fuzzy: compare only significant words (ignore stop words, weights, numbers)
+  const words = getSignificantWords(lower);
+  if (words.length >= 1) {
     let bestMatch = null;
     let bestScore = 0;
+    let bestCount = 0;
     for (const p of products) {
-      const pWords = p.name.toLowerCase().split(/\s+/);
+      const pWords = getSignificantWords(p.name);
+      if (pWords.length === 0) continue;
       let matchCount = 0;
       for (const w of words) {
         if (pWords.some(pw => pw.includes(w) || w.includes(pw))) matchCount++;
       }
       const score = matchCount / Math.max(words.length, pWords.length);
-      if (score > bestScore && score >= 0.5) {
+      if (score > bestScore && score >= 0.6 && matchCount >= 2) {
         bestScore = score;
+        bestCount = matchCount;
         bestMatch = p;
       }
     }
@@ -1286,6 +1316,8 @@ function processVoiceCommand(text) {
   const category = extractCategory(text);
   const productName = extractProductName(text);
 
+  console.log('[VOZ]', { raw: text, action, productName, quantity, expiry, category });
+
   if (!productName || productName.length < 2) {
     document.getElementById('voiceParsed').innerHTML = '<span style="color:#fbbf24">No s\'ha pogut entendre el producte. Torna a provar.</span><br><span style="color:#9ca3af;font-size:12px">He sentit: "' + escHtml(text) + '"</span>';
     showVoiceError('No he entès el producte. Torna a provar.');
@@ -1300,6 +1332,7 @@ function processVoiceCommand(text) {
   document.getElementById('voiceParsed').innerHTML = parsedInfo;
 
   const existing = findExistingProduct(productName);
+  console.log('[VOZ] match:', existing ? existing.name : 'CAP (nou producte)');
 
   let confirmMsg = '';
 
