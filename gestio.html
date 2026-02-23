@@ -1107,6 +1107,8 @@ function normalizeVoiceText(text) {
   let t = text.toLowerCase().trim();
   // Strip punctuation EXCEPT apostrophes (d', l', n')
   t = t.replace(/[.,;:!?¿¡"""()]/g, '');
+  // Normalize various Unicode dashes to regular hyphen
+  t = t.replace(/[\u2010-\u2015\u2212\uFE58\uFE63\uFF0D\u00AD]/g, '-');
   // Normalize curly quotes/apostrophes to straight
   t = t.replace(/[\u2018\u2019\u201A\u201B'']/g, "'");
   t = t.replace(/\s+/g, ' ');
@@ -1125,6 +1127,8 @@ function normalizeVoiceText(text) {
   t = t.replace(/\b(trenta|quaranta|cinquanta|seixanta|setanta|vuitanta|noranta)\s+i?\s*(un|una|dos|dues|tres|quatre|cinc|sis|set|vuit|nou)\b/g, '$1-$2');
   // "cinc cents" → "cinc-cents" (including sis, set, vuit, nou)
   t = t.replace(/\b(dos|dues|tres|quatre|cinc|sis|set|vuit|nou)\s+cent(?:s|es)?\b/g, '$1-cents');
+  // "doscents"/"trescents" (no separator) → "dos-cents"/"tres-cents"
+  t = t.replace(/\b(dos|dues|tres|quatre|cinc|sis|set|vuit|nou)(cents|centes)\b/g, '$1-cents');
   // "centes" → "cents" (normalize feminine hundreds)
   t = t.replace(/\b(\w+)-centes\b/g, '$1-cents');
   // Contractions: "vintitrès" → "vint-i-tres"
@@ -1372,6 +1376,10 @@ function extractProductName(text) {
     const esc = word.replace(/[-]/g, '[-\\s]').replace(/\s+/g, '\\s+');
     cleaned = cleaned.replace(new RegExp('\\b' + esc + '\\s+' + weightUnitPat + '\\b', 'gi'), '');
   }
+  // Catch-all: any hyphenated-cents + weight unit
+  cleaned = cleaned.replace(new RegExp('\\b\\w+-cents\\s+' + weightUnitPat + '\\b', 'gi'), '');
+  // Catch-all: "mig quilo", "mitja litre"
+  cleaned = cleaned.replace(/\b(?:mig|mitja)\s+(?:quilo|litre|quilogram)\b/gi, '');
 
   // Remove expiry phrases
   cleaned = cleaned.replace(/(?:que\s+)?(?:caduca|caduqui|caduque|data\s+de\s+caducitat|de\s+caducitat|caducitat)\s+.*/i, '');
@@ -1469,6 +1477,7 @@ function jaroWinkler(a, b) {
 }
 
 function findMatchingProducts(name) {
+  findMatchingProducts.wasFuzzy = false;
   if (!name) return [];
   const lower = name.toLowerCase();
 
@@ -1481,14 +1490,19 @@ function findMatchingProducts(name) {
   const phonExact = products.find(p => phoneticNorm(p.name.toLowerCase()) === inputPhonFull);
   if (phonExact) return [phonExact];
 
-  // 3) Contains match (min 6 chars)
+  // 3) Contains match (min 6 chars, length ratio >= 0.5)
   const containsMatches = products.filter(p => {
     const pLower = p.name.toLowerCase();
     const shorter = lower.length <= pLower.length ? lower : pLower;
+    const longer = lower.length > pLower.length ? lower : pLower;
     if (shorter.length < 6) return false;
+    if (shorter.length / longer.length < 0.5) return false;
     return pLower.includes(lower) || lower.includes(pLower);
   });
-  if (containsMatches.length > 0) return containsMatches;
+  if (containsMatches.length > 0) {
+    findMatchingProducts.wasFuzzy = true;
+    return containsMatches;
+  }
 
   // 4) Significant words + phonetic Jaro-Winkler
   const words = getSignificantWords(lower);
@@ -1512,7 +1526,7 @@ function findMatchingProducts(name) {
         const jw = jaroWinkler(w, pPhonetic[j]);
         if (jw > bestJW) { bestJW = jw; bestIdx = j; }
       }
-      if (bestJW >= 0.82 && bestIdx >= 0) {
+      if (bestJW >= 0.85 && bestIdx >= 0) {
         matchedScore += bestJW;
         usedProd.add(bestIdx);
       }
@@ -1522,7 +1536,8 @@ function findMatchingProducts(name) {
     const score = matchedScore / Math.max(words.length, pWords.length);
     const inputCoverage = matchCount / words.length;
 
-    if (words.length === 1 && matchCount >= 1) {
+    // Single-word input: only match if product has few significant words
+    if (words.length === 1 && matchCount >= 1 && pWords.length <= 3) {
       scored.push({ product: p, score: inputCoverage * 0.5 + score * 0.5 });
     } else if (matchCount >= 2 && score >= 0.4) {
       scored.push({ product: p, score });
@@ -1534,6 +1549,7 @@ function findMatchingProducts(name) {
   if (scored.length === 0) return [];
   scored.sort((a, b) => b.score - a.score);
   const bestScore = scored[0].score;
+  findMatchingProducts.wasFuzzy = true;
   return scored.filter(s => s.score >= bestScore * 0.8).map(s => s.product);
 }
 
@@ -1614,7 +1630,7 @@ function processVoiceCommand(text) {
   const category = extractCategory(text);
   const productName = extractProductName(text);
 
-  console.log('[VOZ]', { raw: text, action, productName, quantity, expiry, category });
+  console.log('[VOZ v3]', { raw: text, action, productName, quantity, expiry, category });
 
   if (!productName || productName.length < 2) {
     document.getElementById('voiceParsed').innerHTML = '<span style="color:#fbbf24">No s\'ha pogut entendre el producte. Torna a provar.</span><br><span style="color:#9ca3af;font-size:12px">He sentit: "' + escHtml(text) + '"</span>';
@@ -1630,10 +1646,11 @@ function processVoiceCommand(text) {
   document.getElementById('voiceParsed').innerHTML = parsedInfo;
 
   const matches = findMatchingProducts(productName);
-  console.log('[VOZ] matches:', matches.length, matches.map(p => p.name));
+  const wasFuzzy = findMatchingProducts.wasFuzzy;
+  console.log('[VOZ] matches:', matches.length, wasFuzzy ? '(fuzzy)' : '(exact)', matches.map(p => p.name));
 
-  // Multiple matches — let user choose
-  if (matches.length > 1) {
+  // Multiple matches OR single fuzzy match — let user choose/confirm
+  if (matches.length > 1 || (matches.length === 1 && wasFuzzy)) {
     showVoiceChoices(matches, action, productName, quantity, expiry, category);
     return;
   }
