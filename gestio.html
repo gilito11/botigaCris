@@ -791,6 +791,8 @@ const CATEGORY_KEYWORDS = {
   'xocolata':'Alimentació','chocolate':'Alimentació','cacau':'Alimentació','cacao':'Alimentació',
   'mel':'Alimentació','pa':'Alimentació','arròs':'Alimentació','arros':'Alimentació','farina':'Alimentació','oli':'Alimentació',
   'llet':'Alimentació','sucre':'Alimentació','pasta':'Alimentació','cereals':'Alimentació','galletes':'Alimentació',
+  'avena':'Alimentació','civada':'Alimentació','quinoa':'Alimentació','iogurt':'Alimentació','tofu':'Alimentació',
+  'lavanda':'Higiene','dentífric':'Higiene','dentifrici':'Higiene','xampú':'Higiene','xampu':'Higiene',
   'cosmètica':'Cosmètica','cosmetica':'Cosmètica','crema':'Cosmètica',
   'suplements':'Suplements','suplement':'Suplements','vitamina':'Suplements',
   'infusions':'Infusions','infusió':'Infusions','infusio':'Infusions','te':'Infusions','camamilla':'Infusions',
@@ -981,11 +983,26 @@ function showVoiceSuccess(msg) {
 // --- PARSING ---
 
 // Normalize speech-to-text variations before parsing
+// Common speech-to-text corrections (STT errors in Catalan/Spanish)
+const STT_CORRECTIONS = {
+  'havena':'avena','abena':'avena','habena':'avena',
+  'xocolate':'xocolata','chocolata':'xocolata','chocolate':'xocolata',
+  'yogur':'iogurt','iogur':'iogurt','yogurt':'iogurt',
+  'quinua':'quinoa','kinoa':'quinoa',
+  'camomilla':'camamilla','manzanilla':'camamilla',
+  'lavanda':'lavanda','labanda':'lavanda',
+  'savó':'sabó','xabó':'sabó','jabon':'sabó','jabón':'sabó',
+};
+
 function normalizeVoiceText(text) {
   let t = text.toLowerCase().trim();
   // Strip punctuation that speech recognition might add
   t = t.replace(/[.,;:!?¿¡"""''()]/g, '');
   t = t.replace(/\s+/g, ' ');
+  // Apply STT corrections
+  for (const [wrong, right] of Object.entries(STT_CORRECTIONS)) {
+    t = t.replace(new RegExp('\\b' + wrong + '\\b', 'gi'), right);
+  }
   // "vint i tres" → "vint-i-tres"
   t = t.replace(/\bvint\s+i\s+(un|una|dos|dues|tres|quatre|cinc|sis|set|vuit|nou)\b/g, 'vint-i-$1');
   // "trenta-i-cinc" → "trenta-cinc" (remove spurious -i- for 30+)
