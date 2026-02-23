@@ -1290,8 +1290,13 @@ function findExistingProduct(name) {
   let found = products.find(p => p.name.toLowerCase() === lower);
   if (found) return found;
 
-  // Contains match (full name must be substring)
-  found = products.find(p => p.name.toLowerCase().includes(lower) || lower.includes(p.name.toLowerCase()));
+  // Contains match — only if the shorter string is meaningful (>= 6 chars)
+  found = products.find(p => {
+    const pLower = p.name.toLowerCase();
+    const shorter = lower.length <= pLower.length ? lower : pLower;
+    if (shorter.length < 6) return false;
+    return pLower.includes(lower) || lower.includes(pLower);
+  });
   if (found) return found;
 
   // Fuzzy: compare only significant words (ignore stop words, weights, numbers)
@@ -1390,7 +1395,7 @@ function processVoiceCommand(text) {
       logMovement(existing.name, 'entrada', oldQty, existing.quantity, 'veu');
       saveToStorage();
       renderProducts();
-      confirmMsg = 'Afegit: ' + existing.name + ' +' + quantity + ' (total: ' + existing.quantity + ')';
+      confirmMsg = '📦 +' + quantity + ' ' + existing.name + ' (total: ' + existing.quantity + ')';
       showToast(confirmMsg);
     } else {
       const newProduct = {
@@ -1406,7 +1411,7 @@ function processVoiceCommand(text) {
       logMovement(newProduct.name, 'nou', 0, quantity, 'veu');
       saveToStorage();
       renderProducts();
-      confirmMsg = 'Afegit: ' + newProduct.name + ' - ' + quantity + ' unitat' + (quantity !== 1 ? 's' : '');
+      confirmMsg = '🆕 ' + newProduct.name + ' x' + quantity;
       showToast(confirmMsg);
     }
   }
