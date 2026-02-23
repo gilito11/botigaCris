@@ -519,6 +519,23 @@ function closeModal() {
   document.body.style.overflow = '';
 }
 
+function openModalWithVoiceData(name, category, quantity, expiry) {
+  document.getElementById('modal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  document.getElementById('modalTitle').textContent = '🎤 Producte detectat — revisa';
+  document.getElementById('editId').value = '';
+  document.getElementById('fName').value = name.charAt(0).toUpperCase() + name.slice(1);
+  document.getElementById('fCategory').value = category || '';
+  document.getElementById('fQuantity').value = quantity;
+  document.getElementById('fExpiry').value = expiry || '';
+  document.getElementById('fPriceBuy').value = '';
+  document.getElementById('fPriceSell').value = '';
+  document.getElementById('btnSave').textContent = '✅ Guardar producte';
+  document.getElementById('btnDelete').classList.add('hidden');
+  // Focus on name so user can correct immediately
+  setTimeout(() => document.getElementById('fName').focus(), 300);
+}
+
 function editProduct(id) {
   openModal(id);
 }
@@ -985,13 +1002,20 @@ function showVoiceSuccess(msg) {
 // Normalize speech-to-text variations before parsing
 // Common speech-to-text corrections (STT errors in Catalan/Spanish)
 const STT_CORRECTIONS = {
-  'havena':'avena','abena':'avena','habena':'avena',
-  'xocolate':'xocolata','chocolata':'xocolata','chocolate':'xocolata',
+  // b/v confusion + h muda
+  'havena':'avena','habena':'avena','abena':'avena','avena':'avena',
+  'vibamina':'vitamina','bitamina':'vitamina',
+  // Common misspellings
+  'xocolate':'xocolata','chocolata':'xocolata','chocolate':'xocolata','txocolata':'xocolata',
   'yogur':'iogurt','iogur':'iogurt','yogurt':'iogurt',
   'quinua':'quinoa','kinoa':'quinoa',
-  'camomilla':'camamilla','manzanilla':'camamilla',
-  'lavanda':'lavanda','labanda':'lavanda',
-  'savó':'sabó','xabó':'sabó','jabon':'sabó','jabón':'sabó',
+  'camomilla':'camamilla','manzanilla':'camamilla','camamila':'camamilla',
+  'labanda':'lavanda',
+  'savó':'sabó','xabó':'sabó','jabon':'sabó','jabón':'sabó','sabo':'sabó',
+  'champu':'xampú','xampu':'xampú','xampú':'xampú',
+  'holi':'oli','holiva':'oliva',
+  'harròs':'arròs','harros':'arròs',
+  'ecologica':'ecològica','ecologico':'ecològic','biologica':'biològica','bio':'bio',
 };
 
 function normalizeVoiceText(text) {
@@ -1274,23 +1298,32 @@ function getSignificantWords(text) {
     if (w.length <= 2) return false;
     if (FUZZY_STOP_WORDS.has(w)) return false;
     if (FUZZY_WEIGHT_WORDS.has(w)) return false;
-    // Filter compound weight words like "tres-cents", "cinc-cents"
     if (/^\w+-cents$/.test(w)) return false;
-    // Filter pure number words
     if (CATALAN_NUMBERS[w] !== undefined) return false;
     return true;
   });
+}
+
+// Phonetic normalization for Catalan/Spanish: b=v, h silent, strip accents
+function phoneticNorm(word) {
+  return word.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/h/g, '')
+    .replace(/v/g, 'b')
+    .replace(/ç/g, 'ss')
+    .replace(/ny/g, 'n')
+    .replace(/tx/g, 'x');
 }
 
 function findExistingProduct(name) {
   if (!name) return null;
   const lower = name.toLowerCase();
 
-  // Exact match
+  // 1) Exact match
   let found = products.find(p => p.name.toLowerCase() === lower);
   if (found) return found;
 
-  // Contains match — only if the shorter string is meaningful (>= 6 chars)
+  // 2) Contains match (shorter >= 6 chars)
   found = products.find(p => {
     const pLower = p.name.toLowerCase();
     const shorter = lower.length <= pLower.length ? lower : pLower;
@@ -1299,23 +1332,42 @@ function findExistingProduct(name) {
   });
   if (found) return found;
 
-  // Fuzzy: compare only significant words (ignore stop words, weights, numbers)
+  // 3) Significant words match (exact words)
   const words = getSignificantWords(lower);
   if (words.length >= 1) {
     let bestMatch = null;
     let bestScore = 0;
-    let bestCount = 0;
     for (const p of products) {
       const pWords = getSignificantWords(p.name);
       if (pWords.length === 0) continue;
       let matchCount = 0;
       for (const w of words) {
-        if (pWords.some(pw => pw.includes(w) || w.includes(pw))) matchCount++;
+        if (pWords.some(pw => pw === w || (pw.length >= 4 && w.length >= 4 && (pw.includes(w) || w.includes(pw))))) matchCount++;
       }
       const score = matchCount / Math.max(words.length, pWords.length);
       if (score > bestScore && score >= 0.6 && matchCount >= 2) {
         bestScore = score;
-        bestCount = matchCount;
+        bestMatch = p;
+      }
+    }
+    if (bestMatch) return bestMatch;
+  }
+
+  // 4) Phonetic match: b=v, h muda, sense accents
+  if (words.length >= 1) {
+    const inputPhonetic = words.map(phoneticNorm);
+    let bestMatch = null;
+    let bestScore = 0;
+    for (const p of products) {
+      const pWords = getSignificantWords(p.name).map(phoneticNorm);
+      if (pWords.length === 0) continue;
+      let matchCount = 0;
+      for (const w of inputPhonetic) {
+        if (pWords.some(pw => pw === w)) matchCount++;
+      }
+      const score = matchCount / Math.max(inputPhonetic.length, pWords.length);
+      if (score > bestScore && score >= 0.6 && matchCount >= 2) {
+        bestScore = score;
         bestMatch = p;
       }
     }
@@ -1398,26 +1450,16 @@ function processVoiceCommand(text) {
       confirmMsg = '📦 +' + quantity + ' ' + existing.name + ' (total: ' + existing.quantity + ')';
       showToast(confirmMsg);
     } else {
-      const newProduct = {
-        id: genId(),
-        name: productName.charAt(0).toUpperCase() + productName.slice(1),
-        category: category || 'Altres',
-        quantity: quantity,
-        expiry: expiry || '',
-        priceBuy: 0,
-        priceSell: 0,
-      };
-      products.push(newProduct);
-      logMovement(newProduct.name, 'nou', 0, quantity, 'veu');
-      saveToStorage();
-      renderProducts();
-      confirmMsg = '🆕 ' + newProduct.name + ' x' + quantity;
+      // NEW product: open form pre-filled so user can review/correct before saving
+      openModalWithVoiceData(productName, category, quantity, expiry);
+      confirmMsg = '✏️ Revisa i guarda el producte';
       showToast(confirmMsg);
     }
   }
 
-  // Speech synthesis confirmation
-  speakCatalan(confirmMsg);
+  if (existing) {
+    speakCatalan(confirmMsg);
+  }
   showVoiceSuccess(confirmMsg);
 }
 
