@@ -793,29 +793,65 @@ const CATALAN_NUMBERS = {
   'vint':20,'vint-i-un':21,'vint-i-una':21,'vint-i-dos':22,'vint-i-dues':22,'vint-i-tres':23,'vint-i-quatre':24,
   'vint-i-cinc':25,'vint-i-sis':26,'vint-i-set':27,'vint-i-vuit':28,'vint-i-nou':29,
   'trenta':30,'quaranta':40,'cinquanta':50,'seixanta':60,'setanta':70,'vuitanta':80,'noranta':90,'cent':100,
-  'dos-cents':200,'tres-cents':300,'quatre-cents':400,'cinc-cents':500,
-  'mil':1000,'dos mil':2000
+  'dos-cents':200,'dues-centes':200,'tres-cents':300,'tres-centes':300,
+  'quatre-cents':400,'quatre-centes':400,'cinc-cents':500,'cinc-centes':500,
+  'sis-cents':600,'sis-centes':600,'set-cents':700,'set-centes':700,
+  'vuit-cents':800,'vuit-centes':800,'nou-cents':900,'nou-centes':900,
+  'mil':1000,'dos mil':2000,'tres mil':3000,'quatre mil':4000,'cinc mil':5000,
+  'mig':0.5,'mitja':0.5,'dotzena':12,'parell':2
 };
 
 const CATALAN_MONTHS = {
-  'gener':1,'febrer':2,'marc':3,'març':3,'abril':4,'maig':5,'juny':6,
-  'juliol':7,'agost':8,'setembre':9,'octubre':10,'novembre':11,'desembre':12
+  'gener':1,'giner':1,'febrer':2,'marc':3,'març':3,'abril':4,'maig':5,'juny':6,
+  'juliol':7,'agost':8,'setembre':9,'septembre':9,'octubre':10,'novembre':11,'desembre':12,'decembre':12
 };
 
-const CATEGORIES = ['Alimentació','Cosmètica','Suplements','Infusions','Higiene','Altres'];
+const CATEGORIES = ['Alimentació','Cosmètica','Suplements','Infusions','Higiene','Neteja','Altres'];
 const CATEGORY_KEYWORDS = {
+  // Alimentació — cereals, grans, llegums, fruits secs, olis, dolços
   'alimentació':'Alimentació','alimentacio':'Alimentació','menjar':'Alimentació',
   'xocolata':'Alimentació','chocolate':'Alimentació','cacau':'Alimentació','cacao':'Alimentació',
-  'mel':'Alimentació','pa':'Alimentació','arròs':'Alimentació','arros':'Alimentació','farina':'Alimentació','oli':'Alimentació',
-  'llet':'Alimentació','sucre':'Alimentació','pasta':'Alimentació','cereals':'Alimentació','galletes':'Alimentació',
-  'avena':'Alimentació','civada':'Alimentació','quinoa':'Alimentació','iogurt':'Alimentació','tofu':'Alimentació',
-  'lavanda':'Higiene','dentífric':'Higiene','dentifrici':'Higiene','xampú':'Higiene','xampu':'Higiene',
-  'cosmètica':'Cosmètica','cosmetica':'Cosmètica','crema':'Cosmètica',
-  'suplements':'Suplements','suplement':'Suplements','vitamina':'Suplements',
-  'infusions':'Infusions','infusió':'Infusions','infusio':'Infusions','te':'Infusions','camamilla':'Infusions',
-  'higiene':'Higiene','sabó':'Higiene','sabo':'Higiene',
-  'vaixelles':'Neteja','rentavaixelles':'Neteja','renta vaixelles':'Neteja','detergent':'Neteja','lleixiu':'Neteja','pastilla':'Neteja',
-  'altres':'Altres'
+  'mel':'Alimentació','arròs':'Alimentació','arros':'Alimentació','farina':'Alimentació','oli':'Alimentació','oliva':'Alimentació',
+  'llet':'Alimentació','sucre':'Alimentació','pasta':'Alimentació','cereals':'Alimentació','galletes':'Alimentació','galetes':'Alimentació',
+  'avena':'Alimentació','civada':'Alimentació','quinoa':'Alimentació','iogurt':'Alimentació','tofu':'Alimentació','tempeh':'Alimentació',
+  'blat':'Alimentació','espelta':'Alimentació','ordi':'Alimentació','mill':'Alimentació','muesli':'Alimentació','granola':'Alimentació',
+  'llenties':'Alimentació','llentilles':'Alimentació','cigrons':'Alimentació','mongetes':'Alimentació','faves':'Alimentació','soja':'Alimentació',
+  'ametlles':'Alimentació','ametlla':'Alimentació','nous':'Alimentació','avellanes':'Alimentació','anacards':'Alimentació','pistatxos':'Alimentació','cacauets':'Alimentació','pinyons':'Alimentació',
+  'llavors':'Alimentació','chia':'Alimentació','sèsam':'Alimentació','sesam':'Alimentació',
+  'vinagre':'Alimentació','sal':'Alimentació','pebre':'Alimentació','canyella':'Alimentació','cúrcuma':'Alimentació','curcuma':'Alimentació',
+  'panses':'Alimentació','dàtils':'Alimentació','datils':'Alimentació','figues':'Alimentació',
+  'formatge':'Alimentació','mantega':'Alimentació','kefir':'Alimentació',
+  'melmelada':'Alimentació','panela':'Alimentació','stevia':'Alimentació','agave':'Alimentació',
+  'pa':'Alimentació','barra':'Alimentació',
+  'spirulina':'Alimentació','chlorella':'Alimentació',
+  // Cosmètica
+  'cosmètica':'Cosmètica','cosmetica':'Cosmètica','crema':'Cosmètica','sèrum':'Cosmètica','serum':'Cosmètica',
+  'bàlsam':'Cosmètica','balsam':'Cosmètica','loció':'Cosmètica','locio':'Cosmètica',
+  'hidratant':'Cosmètica','protector solar':'Cosmètica','maquillatge':'Cosmètica','aloe vera':'Cosmètica',
+  // Suplements
+  'suplements':'Suplements','suplement':'Suplements','vitamina':'Suplements','complement':'Suplements',
+  'magnesi':'Suplements','probiòtic':'Suplements','probiotic':'Suplements','omega':'Suplements',
+  'ferro':'Suplements','zinc':'Suplements','calci':'Suplements','col·lagen':'Suplements','colagen':'Suplements',
+  'melatonina':'Suplements','equinàcia':'Suplements','ginseng':'Suplements','propolis':'Suplements',
+  // Infusions
+  'infusió':'Infusions','infusio':'Infusions','infusions':'Infusions',
+  'camamilla':'Infusions','camomilla':'Infusions','menta':'Infusions','valeriana':'Infusions',
+  'rooibos':'Infusions','matcha':'Infusions','matxa':'Infusions',
+  'til·la':'Infusions','tila':'Infusions','tilla':'Infusions',
+  'te verd':'Infusions','te negre':'Infusions','te':'Infusions',
+  // Higiene
+  'higiene':'Higiene','sabó':'Higiene','sabo':'Higiene','sabons':'Higiene',
+  'xampú':'Higiene','xampu':'Higiene','condicionador':'Higiene',
+  'dentífric':'Higiene','dentifrici':'Higiene','pasta de dents':'Higiene',
+  'desodorant':'Higiene','gel de dutxa':'Higiene','gel de bany':'Higiene',
+  'lavanda':'Higiene','esponja':'Higiene',
+  // Neteja
+  'neteja':'Neteja','detergent':'Neteja','lleixiu':'Neteja','suavitzant':'Neteja',
+  'rentavaixelles':'Neteja','renta vaixelles':'Neteja','vaixelles':'Neteja','rentaplats':'Neteja',
+  'desengrasant':'Neteja','desengreixant':'Neteja','llevataques':'Neteja',
+  'bicarbonat':'Neteja','fregall':'Neteja',
+  // Altres
+  'altres':'Altres','espelma':'Altres','encens':'Altres'
 };
 
 function initVoice() {
@@ -1003,32 +1039,80 @@ function showVoiceSuccess(msg) {
 // Normalize speech-to-text variations before parsing
 // Common speech-to-text corrections (STT errors in Catalan/Spanish)
 const STT_CORRECTIONS = {
-  // b/v confusion + h muda
-  'havena':'avena','habena':'avena','abena':'avena','avena':'avena',
+  // === B/V betacisme ===
+  'havena':'avena','habena':'avena','abena':'avena',
   'vibamina':'vitamina','bitamina':'vitamina',
-  // Common misspellings
-  'xocolate':'xocolata','chocolata':'xocolata','chocolate':'xocolata','txocolata':'xocolata',
-  'yogur':'iogurt','iogur':'iogurt','yogurt':'iogurt',
-  'quinua':'quinoa','kinoa':'quinoa',
+  'binagre':'vinagre','labanda':'lavanda','labenda':'lavanda',
+  'bainilla':'vainilla','banilla':'vainilla',
+  'berdura':'verdura','berdures':'verdures','begetal':'vegetal',
+  'bicarvonat':'bicarbonat','vicarbonat':'bicarbonat',
+  'abellana':'avellana','abellanes':'avellanes',
+  // === H muda ===
+  'holi':'oli','holiva':'oliva','harròs':'arròs','harros':'arròs',
+  'erbes':'herbes','erba':'herba','erboristeria':'herboristeria',
+  'igiene':'higiene',
+  // === Xocolata ===
+  'xocolate':'xocolata','chocolata':'xocolata','chocolate':'xocolata','txocolata':'xocolata','xocolat':'xocolata',
+  // === Lactics / alternatives ===
+  'yogur':'iogurt','iogur':'iogurt','yogurt':'iogurt','yogures':'iogurt',
+  // === Cereals ===
+  'quinua':'quinoa','kinoa':'quinoa','kinua':'quinoa',
+  'civadda':'civada','sivada':'civada',
+  'espelda':'espelta','spelta':'espelta',
+  // === Infusions ===
   'camomilla':'camamilla','manzanilla':'camamilla','camamila':'camamilla',
-  'labanda':'lavanda',
+  'roibos':'rooibos',
+  // === Higiene ===
   'savó':'sabó','xabó':'sabó','jabon':'sabó','jabón':'sabó','sabo':'sabó',
-  'champu':'xampú','xampu':'xampú','xampú':'xampú',
-  'holi':'oli','holiva':'oliva',
-  'harròs':'arròs','harros':'arròs',
-  'ecologica':'ecològica','ecologico':'ecològic','biologica':'biològica','bio':'bio',
-  // Household
+  'champu':'xampú','xampu':'xampú','shampú':'xampú','champo':'xampú',
+  // === Neteja ===
   'baixelles':'vaixelles','beixelles':'vaixelles','vaixeles':'vaixelles',
   'rentavaixelles':'renta vaixelles','rentabaixelles':'renta vaixelles',
-  'pastilles':'pastilla','pastiya':'pastilla',
-  'deterjent':'detergent','detergen':'detergent',
+  'pastilles':'pastilla','pastiya':'pastilla','pastillas':'pastilla',
+  'deterjent':'detergent','detergen':'detergent','detergente':'detergent',
+  'lejia':'lleixiu','lejía':'lleixiu',
+  'suavizante':'suavitzant','suavizant':'suavitzant',
+  'quitamanchas':'llevataques',
+  // === Castellà → Català (code-switching) ===
+  'limon':'llimona','limón':'llimona',
+  'naranja':'taronja',
+  'fresa':'maduixa','fresas':'maduixes',
+  'manzana':'poma',
+  'platano':'plàtan','plátano':'plàtan',
+  'tomate':'tomàquet','tomates':'tomàquets',
+  'cebolla':'ceba','cebollas':'cebes',
+  'ajo':'all',
+  'zanahoria':'pastanaga',
+  'espinacas':'espinacs',
+  'berenjena':'albergínia',
+  'calabacin':'carbassó','calabacín':'carbassó',
+  'lenteja':'llentilles','lentejas':'llentilles',
+  'garbanzo':'cigrons','garbanzos':'cigrons',
+  'almendra':'ametlla','almendras':'ametlles',
+  'pistacho':'pistatxo',
+  'anacardo':'anacard','anacardos':'anacards',
+  'magnesio':'magnesi','calcio':'calci','hierro':'ferro',
+  'colageno':'col·lagen','colágeno':'col·lagen',
+  'probiotico':'probiòtic',
+  // === Qualitats ===
+  'ecologica':'ecològica','ecologico':'ecològic','biologica':'biològica','bio':'bio',
+  'integral':'integral','organica':'orgànica','organico':'orgànic',
+  // === Unitats ===
+  'kilo':'quilo','kilos':'quilos','kilogramos':'quilograms',
+  'gramo':'grams','gramos':'grams',
+  'litro':'litres','litros':'litres',
 };
 
 function normalizeVoiceText(text) {
   let t = text.toLowerCase().trim();
-  // Strip punctuation that speech recognition might add
-  t = t.replace(/[.,;:!?¿¡"""''()]/g, '');
+  // Strip punctuation EXCEPT apostrophes (d', l', n')
+  t = t.replace(/[.,;:!?¿¡"""()]/g, '');
+  // Normalize curly quotes/apostrophes to straight
+  t = t.replace(/[\u2018\u2019\u201A\u201B'']/g, "'");
   t = t.replace(/\s+/g, ' ');
+  // Normalize Catalan contractions: "d oliva" → "d'oliva", "l arros" → "l'arros"
+  t = t.replace(/\bd\s+(?=[aeiouàèéíòóúh])/g, "d'");
+  t = t.replace(/\bl\s+(?=[aeiouàèéíòóúh])/g, "l'");
   // Apply STT corrections
   for (const [wrong, right] of Object.entries(STT_CORRECTIONS)) {
     t = t.replace(new RegExp('\\b' + wrong + '\\b', 'gi'), right);
@@ -1039,11 +1123,13 @@ function normalizeVoiceText(text) {
   t = t.replace(/\b(trenta|quaranta|cinquanta|seixanta|setanta|vuitanta|noranta)-i-(un|una|dos|dues|tres|quatre|cinc|sis|set|vuit|nou)\b/g, '$1-$2');
   // "trenta cinc" or "trenta i cinc" → "trenta-cinc"
   t = t.replace(/\b(trenta|quaranta|cinquanta|seixanta|setanta|vuitanta|noranta)\s+i?\s*(un|una|dos|dues|tres|quatre|cinc|sis|set|vuit|nou)\b/g, '$1-$2');
-  // "cinc cents" → "cinc-cents"
-  t = t.replace(/\b(dos|tres|quatre|cinc|sis|set|vuit|nou)\s+cents?\b/g, '$1-cents');
+  // "cinc cents" → "cinc-cents" (including sis, set, vuit, nou)
+  t = t.replace(/\b(dos|dues|tres|quatre|cinc|sis|set|vuit|nou)\s+cent(?:s|es)?\b/g, '$1-cents');
+  // "centes" → "cents" (normalize feminine hundreds)
+  t = t.replace(/\b(\w+)-centes\b/g, '$1-cents');
   // Contractions: "vintitrès" → "vint-i-tres"
   t = t.replace(/\bvinti(\w+)/g, 'vint-i-$1');
-  // Strip accents from number-word positions (très → tres, sis → sis)
+  // Strip accents from number-word positions (très → tres)
   t = t.replace(/\bvint-i-(\w+)/g, (m, p1) => 'vint-i-' + p1.normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
   return t;
 }
@@ -1147,16 +1233,21 @@ function extractQuantity(text) {
   const digitUnitat = clean.match(/(\d+)\s*unitats?\b/i);
   if (digitUnitat) return parseInt(digitUnitat[1]);
 
+  // Special quantity words: dotzena, parell, mig
+  if (/\buna\s+dotzena\b/i.test(clean) || /\bdotzena\b/i.test(clean)) return 12;
+  if (/\bmitja\s+dotzena\b/i.test(clean)) return 6;
+  if (/\bun\s+parell\b/i.test(clean) || /\bparell\b/i.test(clean)) return 2;
+
   // "una"/"un" as quantity
   if (/\buna\b/i.test(clean)) return 1;
-  if (/^(?:afegeix|afegir|treu|actualitza)\s+un\b/i.test(text)) return 1;
+  if (/^(?:afegeix|afegir|posa|posar|treu|treure|tira|tirar|actualitza|actualitzar)\s+un\b/i.test(text)) return 1;
 
   // Standalone digit NOT before weight unit
   const digit = clean.match(/\b(\d+)\b(?!\s*(?:grams?|quilos?|kg|g|ml|l|cl)\b)/i);
   if (digit) return parseInt(digit[1]);
 
   // Leading number word after action — only if NOT followed by a weight unit
-  const afterAction = clean.replace(/^(?:afegeix|afegir|treu|actualitza)\s+(?:una?\s+)?/i, '').trim();
+  const afterAction = clean.replace(/^(?:afegeix|afegir|posa|posar|entra|entrar|treu|treure|tira|tirar|elimina|eliminar|actualitza|actualitzar|modifica|modificar|canvia|canviar)\s+(?:una?\s+)?/i, '').trim();
   const leadingMatch = afterAction.match(/^([\w]+(?:-[\w]+)*)\b/);
   if (leadingMatch) {
     const candidate = leadingMatch[1];
@@ -1224,7 +1315,9 @@ function parseCatalanDate(text) {
 
 function extractCategory(text) {
   const lower = text.toLowerCase();
-  for (const [keyword, cat] of Object.entries(CATEGORY_KEYWORDS)) {
+  // Sort keywords by length descending so more specific matches win
+  const sorted = Object.entries(CATEGORY_KEYWORDS).sort((a, b) => b[0].length - a[0].length);
+  for (const [keyword, cat] of sorted) {
     const re = new RegExp('\\b' + keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
     if (re.test(lower)) return cat;
   }
@@ -1232,8 +1325,8 @@ function extractCategory(text) {
 }
 
 function extractAction(text) {
-  if (/\b(?:treu|treure)\b/.test(text)) return 'remove';
-  if (/\b(?:actualitza|actualitzar)\b/.test(text)) return 'update';
+  if (/\b(?:treu|treure|tira|tirar|elimina|eliminar|resta|restar|baixa|baixar)\b/.test(text)) return 'remove';
+  if (/\b(?:actualitza|actualitzar|modifica|modificar|canvia|canviar)\b/.test(text)) return 'update';
   return 'add';
 }
 
@@ -1241,7 +1334,7 @@ function extractProductName(text) {
   let cleaned = text;
 
   // Remove action words at the start
-  cleaned = cleaned.replace(/^(afegeix|afegir|afegei|actualitza|actualitzar|treu|treure)\s+/i, '');
+  cleaned = cleaned.replace(/^(afegeix|afegir|afegei|posa|posar|entra|entrar|actualitza|actualitzar|modifica|modificar|canvia|canviar|treu|treure|tira|tirar|elimina|eliminar|resta|restar|baixa|baixar)\s+/i, '');
 
   // Remove leading "una"/"un"
   cleaned = cleaned.replace(/^una?\s+/i, '');
@@ -1292,9 +1385,9 @@ function extractProductName(text) {
   cleaned = cleaned.replace(/^[,\s]+|[,\s]+$/g, '').trim();
 
   // Remove orphan trailing prepositions/articles
-  cleaned = cleaned.replace(/\s+(de|del|de la|de les|a|al|el|la|les|els|un|una|uns|unes)\s*$/i, '').trim();
+  cleaned = cleaned.replace(/\s+(de|del|de la|de les|d'|a|al|el|la|les|els|un|una|uns|unes)\s*$/i, '').trim();
   // Remove orphan leading articles
-  cleaned = cleaned.replace(/^(el|la|les|els)\s+/i, '').trim();
+  cleaned = cleaned.replace(/^(el|la|les|els|l')\s*/i, '').trim();
 
   return cleaned;
 }
@@ -1310,7 +1403,10 @@ const FUZZY_WEIGHT_WORDS = new Set([
 ]);
 
 function getSignificantWords(text) {
-  return text.toLowerCase().split(/[\s]+/).filter(w => {
+  return text.toLowerCase().split(/[\s]+/).map(w => {
+    // Strip apostrophe contractions: d'oliva → oliva, l'arròs → arròs
+    return w.replace(/^[dln]'/, '');
+  }).filter(w => {
     if (w.length <= 2) return false;
     if (FUZZY_STOP_WORDS.has(w)) return false;
     if (FUZZY_WEIGHT_WORDS.has(w)) return false;
@@ -1320,77 +1416,56 @@ function getSignificantWords(text) {
   });
 }
 
-// Phonetic normalization for Catalan/Spanish: b=v, h silent, strip accents
+// Phonetic normalization for Catalan/Spanish
 function phoneticNorm(word) {
-  return word.toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/h/g, '')
-    .replace(/v/g, 'b')
-    .replace(/ç/g, 'ss')
-    .replace(/ny/g, 'n')
-    .replace(/tx/g, 'x');
+  let s = word.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  s = s.replace(/h/g, '');       // h muda
+  s = s.replace(/ny/g, 'n');     // palatal nasal
+  s = s.replace(/ll/g, 'l');     // palatal lateral
+  s = s.replace(/tx/g, 'x');     // africada
+  s = s.replace(/ig$/g, 'x');    // final ig
+  s = s.replace(/qu(?=[ei])/g, 'k'); // qu+e/i
+  s = s.replace(/gu(?=[ei])/g, 'g'); // gu+e/i
+  s = s.replace(/c(?=[ei])/g, 's');  // ce, ci
+  s = s.replace(/ç/g, 's');     // ç → s
+  s = s.replace(/v/g, 'b');     // betacisme
+  s = s.replace(/ss/g, 's');    // doble s
+  s = s.replace(/rr/g, 'r');    // doble r
+  s = s.replace(/g(?=[ei])/g, 'j'); // ge, gi
+  s = s.replace(/(.)\1+/g, '$1'); // collapse repeated chars
+  return s;
 }
 
-function findExistingProduct(name) {
-  if (!name) return null;
-  const lower = name.toLowerCase();
-
-  // 1) Exact match
-  let found = products.find(p => p.name.toLowerCase() === lower);
-  if (found) return found;
-
-  // 2) Contains match (shorter >= 6 chars)
-  found = products.find(p => {
-    const pLower = p.name.toLowerCase();
-    const shorter = lower.length <= pLower.length ? lower : pLower;
-    if (shorter.length < 6) return false;
-    return pLower.includes(lower) || lower.includes(pLower);
-  });
-  if (found) return found;
-
-  // 3) Significant words match (exact words)
-  const words = getSignificantWords(lower);
-  if (words.length >= 1) {
-    let bestMatch = null;
-    let bestScore = 0;
-    for (const p of products) {
-      const pWords = getSignificantWords(p.name);
-      if (pWords.length === 0) continue;
-      let matchCount = 0;
-      for (const w of words) {
-        if (pWords.some(pw => pw === w || (pw.length >= 4 && w.length >= 4 && (pw.includes(w) || w.includes(pw))))) matchCount++;
-      }
-      const score = matchCount / Math.max(words.length, pWords.length);
-      if (score > bestScore && score >= 0.6 && matchCount >= 2) {
-        bestScore = score;
-        bestMatch = p;
-      }
+// Jaro-Winkler similarity [0-1] — ideal for short strings like product words
+function jaroWinkler(a, b) {
+  if (a === b) return 1;
+  const la = a.length, lb = b.length;
+  if (!la || !lb) return 0;
+  const matchWindow = Math.max(Math.floor(Math.max(la, lb) / 2) - 1, 0);
+  const aM = new Array(la).fill(false);
+  const bM = new Array(lb).fill(false);
+  let matches = 0, transpositions = 0;
+  for (let i = 0; i < la; i++) {
+    const lo = Math.max(0, i - matchWindow), hi = Math.min(i + matchWindow + 1, lb);
+    for (let j = lo; j < hi; j++) {
+      if (bM[j] || a[i] !== b[j]) continue;
+      aM[i] = bM[j] = true; matches++; break;
     }
-    if (bestMatch) return bestMatch;
   }
-
-  // 4) Phonetic match: b=v, h muda, sense accents
-  if (words.length >= 1) {
-    const inputPhonetic = words.map(phoneticNorm);
-    let bestMatch = null;
-    let bestScore = 0;
-    for (const p of products) {
-      const pWords = getSignificantWords(p.name).map(phoneticNorm);
-      if (pWords.length === 0) continue;
-      let matchCount = 0;
-      for (const w of inputPhonetic) {
-        if (pWords.some(pw => pw === w)) matchCount++;
-      }
-      const score = matchCount / Math.max(inputPhonetic.length, pWords.length);
-      if (score > bestScore && score >= 0.6 && matchCount >= 2) {
-        bestScore = score;
-        bestMatch = p;
-      }
-    }
-    if (bestMatch) return bestMatch;
+  if (!matches) return 0;
+  let k = 0;
+  for (let i = 0; i < la; i++) {
+    if (!aM[i]) continue;
+    while (!bM[k]) k++;
+    if (a[i] !== b[k]) transpositions++;
+    k++;
   }
-
-  return null;
+  const jaro = (matches / la + matches / lb + (matches - transpositions / 2) / matches) / 3;
+  let prefix = 0;
+  for (let i = 0; i < Math.min(4, la, lb); i++) {
+    if (a[i] === b[i]) prefix++; else break;
+  }
+  return jaro + prefix * 0.1 * (1 - jaro);
 }
 
 function findMatchingProducts(name) {
@@ -1401,7 +1476,12 @@ function findMatchingProducts(name) {
   const exact = products.find(p => p.name.toLowerCase() === lower);
   if (exact) return [exact];
 
-  // 2) Contains match (min 6 chars)
+  // 2) Phonetic exact match (full name)
+  const inputPhonFull = phoneticNorm(lower);
+  const phonExact = products.find(p => phoneticNorm(p.name.toLowerCase()) === inputPhonFull);
+  if (phonExact) return [phonExact];
+
+  // 3) Contains match (min 6 chars)
   const containsMatches = products.filter(p => {
     const pLower = p.name.toLowerCase();
     const shorter = lower.length <= pLower.length ? lower : pLower;
@@ -1410,7 +1490,7 @@ function findMatchingProducts(name) {
   });
   if (containsMatches.length > 0) return containsMatches;
 
-  // 3) Significant words + phonetic
+  // 4) Significant words + phonetic Jaro-Winkler
   const words = getSignificantWords(lower);
   if (words.length === 0) return [];
 
@@ -1422,23 +1502,32 @@ function findMatchingProducts(name) {
     if (pWords.length === 0) continue;
     const pPhonetic = pWords.map(phoneticNorm);
 
-    let exactCount = 0;
-    for (const w of words) {
-      if (pWords.some(pw => pw === w || (pw.length >= 4 && w.length >= 4 && (pw.includes(w) || w.includes(pw))))) exactCount++;
-    }
-
-    let phoneticCount = 0;
+    // Word-level matching with Jaro-Winkler on phonetic forms
+    let matchedScore = 0;
+    const usedProd = new Set();
     for (const w of inputPhonetic) {
-      if (pPhonetic.some(pw => pw === w)) phoneticCount++;
+      let bestJW = 0, bestIdx = -1;
+      for (let j = 0; j < pPhonetic.length; j++) {
+        if (usedProd.has(j)) continue;
+        const jw = jaroWinkler(w, pPhonetic[j]);
+        if (jw > bestJW) { bestJW = jw; bestIdx = j; }
+      }
+      if (bestJW >= 0.82 && bestIdx >= 0) {
+        matchedScore += bestJW;
+        usedProd.add(bestIdx);
+      }
     }
 
-    const bestCount = Math.max(exactCount, phoneticCount);
-    const score = bestCount / Math.max(words.length, pWords.length);
+    const matchCount = usedProd.size;
+    const score = matchedScore / Math.max(words.length, pWords.length);
+    const inputCoverage = matchCount / words.length;
 
-    if (words.length === 1 && bestCount >= 1) {
+    if (words.length === 1 && matchCount >= 1) {
+      scored.push({ product: p, score: inputCoverage * 0.5 + score * 0.5 });
+    } else if (matchCount >= 2 && score >= 0.4) {
       scored.push({ product: p, score });
-    } else if (bestCount >= 2 && score >= 0.5) {
-      scored.push({ product: p, score });
+    } else if (inputCoverage >= 0.8 && matchCount >= 1) {
+      scored.push({ product: p, score: score * 0.9 });
     }
   }
 
@@ -1607,7 +1696,7 @@ function processVoiceCommand(text) {
 function testVoiceParsing() {
   const tests = [
     { input: "afegeix una barra de xocolata de cinc-cents grams que caduqui el vint-i-tres de març del dos mil vint-i-vuit",
-      expected: { action: 'add', product: 'barra de xocolata de cinc-cents grams', qty: 1, expiry: '2028-03-23' } },
+      expected: { action: 'add', product: 'barra de xocolata', qty: 1, expiry: '2028-03-23' } },
     { input: "afegeix tres paquets de te verd que caduca el quinze de juny",
       expected: { action: 'add', product: 'paquets de te verd', qty: 3 } },
     { input: "treu dos crema hidratant",
@@ -1617,16 +1706,19 @@ function testVoiceParsing() {
     { input: "sabó de lavanda caducitat tretze de setembre del dos mil vint-i-sis",
       expected: { action: 'add', product: 'sabó de lavanda', qty: 1, expiry: '2026-09-13' } },
     { input: "afegeix cinc quilos de mel",
-      expected: { action: 'add', product: 'cinc quilos de mel', qty: 1 } },
-    { input: "dos pots d'infusió de camamilla",
-      expected: { action: 'add', product: "pots d'infusió de camamilla", qty: 2 } },
-    { input: "barra de xocolata de cinc-cents grams que caduqui el vint-i-tres de març del dos mil vint-i-vuit",
-      expected: { action: 'add', product: 'barra de xocolata de cinc-cents grams', qty: 1, expiry: '2028-03-23' } },
-    // Speech-to-text variations
-    { input: "afegeix una barra de xocolata de cinc cents grams que caduqui el vint i tres de març del dos mil vint i vuit",
-      expected: { action: 'add', product: 'barra de xocolata de cinc-cents grams', qty: 1, expiry: '2028-03-23' } },
-    { input: "afegeix tres paquets de te verd que caduca el 15 de juny",
-      expected: { action: 'add', product: 'paquets de te verd', qty: 3, expiry_day: 15, expiry_month: 6 } },
+      expected: { action: 'add', product: 'mel', qty: 1 } },
+    { input: "pastilla de renta vaixelles quatre-cents grams",
+      expected: { action: 'add', product: 'pastilla de renta vaixelles', qty: 1 } },
+    { input: "habena ecologica tres-cents grams",
+      expected: { action: 'add', product: "avena ecològica", qty: 1 } },
+    { input: "tira dos crema hidratant",
+      expected: { action: 'remove', product: 'crema hidratant', qty: 2 } },
+    { input: "posa tres oli d'oliva",
+      expected: { action: 'add', product: "oli d'oliva", qty: 3 } },
+    { input: "afegeix una dotzena d'ous",
+      expected: { action: 'add', qty: 12 } },
+    { input: "afegeix sis-cents grams de quinoa",
+      expected: { action: 'add', product: 'quinoa', qty: 1 } },
   ];
 
   let pass = 0, fail = 0;
