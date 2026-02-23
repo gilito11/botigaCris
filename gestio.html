@@ -44,6 +44,8 @@ tailwind.config = {
   .voice-status { font-size: 15px; font-weight: 700; color: #a78bfa; text-align: center; margin-bottom: 8px; }
   .voice-text { font-size: 20px; font-weight: 800; color: white; text-align: center; min-height: 30px; margin-bottom: 8px; }
   .voice-parsed { font-size: 14px; color: #d1d5db; text-align: center; }
+  .quick-btn { -webkit-user-select: none; user-select: none; touch-action: manipulation; line-height: 1; }
+  .quick-btn:active { transform: scale(0.85); }
   .voice-dots span { display: inline-block; width: 8px; height: 8px; margin: 0 3px; background: #a78bfa; border-radius: 50%; animation: voiceDot 1.2s infinite; }
   .voice-dots span:nth-child(2) { animation-delay: 0.2s; }
   .voice-dots span:nth-child(3) { animation-delay: 0.4s; }
@@ -102,6 +104,11 @@ tailwind.config = {
   <div>
     <div id="sumLowStock" class="text-2xl font-extrabold text-red-500">0</div>
     <div class="text-xs text-gray-500 font-semibold">Poc estoc</div>
+  </div>
+  <div class="border-l border-verd-200"></div>
+  <div class="cursor-pointer active:scale-95 transition" onclick="showHistory()">
+    <div class="text-2xl">📋</div>
+    <div class="text-xs text-gray-500 font-semibold">Historial</div>
   </div>
 </div>
 
@@ -258,6 +265,18 @@ tailwind.config = {
   </div>
 </div>
 
+<!-- HISTORY MODAL -->
+<div id="historyModal" class="fixed inset-0 z-[60] hidden">
+  <div class="absolute inset-0 bg-black/50" onclick="closeHistory()"></div>
+  <div class="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl max-h-[80vh] flex flex-col">
+    <div class="p-4 border-b flex justify-between items-center shrink-0">
+      <h2 class="font-extrabold text-xl text-verd-700">📋 Historial de moviments</h2>
+      <button onclick="closeHistory()" class="text-2xl text-gray-400 w-10 h-10 flex items-center justify-center">&times;</button>
+    </div>
+    <div id="historyList" class="p-4 overflow-y-auto flex-1 space-y-1"></div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div id="toast" class="fixed bottom-24 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded-2xl font-bold text-lg shadow-xl z-[70] hidden transition-opacity"></div>
 
@@ -282,6 +301,21 @@ function loadProducts() {
 
 function saveToStorage() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
+}
+
+const LOG_KEY = 'botigaCris_log';
+function logMovement(productName, action, qtyBefore, qtyAfter, method) {
+  const log = JSON.parse(localStorage.getItem(LOG_KEY) || '[]');
+  log.unshift({
+    ts: new Date().toISOString(),
+    product: productName,
+    action: action,
+    delta: qtyAfter - qtyBefore,
+    qtyAfter: qtyAfter,
+    method: method || 'manual'
+  });
+  if (log.length > 200) log.length = 200;
+  localStorage.setItem(LOG_KEY, JSON.stringify(log));
 }
 
 function getDefaultProducts() {
@@ -406,10 +440,12 @@ function renderCard(p) {
             ${p.priceSell ? `<span>💰 ${Number(p.priceSell).toFixed(2)}€</span>` : ''}
           </div>
         </div>
-        <div class="flex flex-col items-center ml-2 min-w-[52px]">
+        <div class="flex flex-col items-center ml-2">
           <div class="flex items-center gap-1">
             ${stockWarning}
-            <span class="text-2xl font-extrabold ${lowStock ? 'text-red-500' : 'text-verd-700'}">${p.quantity}</span>
+            <button onclick="event.stopPropagation();quickAdjust('${p.id}',-1)" class="quick-btn w-8 h-8 rounded-full bg-red-100 text-red-600 font-bold text-lg flex items-center justify-center">−</button>
+            <span class="text-2xl font-extrabold ${lowStock ? 'text-red-500' : 'text-verd-700'} w-10 text-center">${p.quantity}</span>
+            <button onclick="event.stopPropagation();quickAdjust('${p.id}',1)" class="quick-btn w-8 h-8 rounded-full bg-green-100 text-green-600 font-bold text-lg flex items-center justify-center">+</button>
           </div>
           <span class="text-xs text-gray-400 font-bold">unitats</span>
         </div>
@@ -510,10 +546,17 @@ function saveProduct(e) {
 
   if (id) {
     const idx = products.findIndex(p => p.id === id);
-    if (idx !== -1) products[idx] = data;
+    if (idx !== -1) {
+      const oldQty = products[idx].quantity;
+      products[idx] = data;
+      if (data.quantity !== oldQty) {
+        logMovement(data.name, data.quantity > oldQty ? 'entrada' : 'sortida', oldQty, data.quantity);
+      }
+    }
     showToast('Producte actualitzat ✅');
   } else {
     products.push(data);
+    logMovement(data.name, 'nou', 0, data.quantity);
     showToast('Producte afegit ✅');
   }
 
@@ -534,6 +577,8 @@ function deleteProduct() {
 
 function confirmDelete() {
   if (deleteTargetId) {
+    const dp = products.find(x => x.id === deleteTargetId);
+    if (dp) logMovement(dp.name, 'eliminat', dp.quantity, 0);
     products = products.filter(p => p.id !== deleteTargetId);
     saveToStorage();
     showToast('Producte esborrat 🗑️');
@@ -625,14 +670,94 @@ function importCSV(event) {
   event.target.value = '';
 }
 
-// --- QUICK STOCK ADJUSTMENT (from list) ---
-// Long press to open quick quantity adjustment
-let longPressTimer = null;
+// --- QUICK STOCK ADJUSTMENT ---
+function quickAdjust(id, delta) {
+  const p = products.find(x => x.id === id);
+  if (!p) return;
+  const oldQty = p.quantity;
+  p.quantity = Math.max(0, p.quantity + delta);
+  if (p.quantity !== oldQty) {
+    logMovement(p.name, delta > 0 ? 'entrada' : 'sortida', oldQty, p.quantity, 'ràpid');
+    saveToStorage();
+    renderProducts();
+  }
+}
+
+// --- EXPIRY ALERTS ---
+function checkExpiryAlerts() {
+  if (sessionStorage.getItem('expiryAlertDismissed')) return;
+  const alerts = [];
+  products.forEach(p => {
+    if (!p.expiry) return;
+    const days = daysUntilExpiry(p.expiry);
+    if (days !== null && days <= 7) alerts.push({ name: p.name, days });
+  });
+  if (alerts.length === 0) return;
+  alerts.sort((a, b) => a.days - b.days);
+
+  let html = '<div id="expiryAlert" class="mx-3 mt-2 bg-orange-50 border-2 border-orange-300 rounded-2xl p-3 relative">';
+  html += '<button onclick="dismissExpiryAlert()" class="absolute top-2 right-3 text-gray-400 hover:text-gray-600 text-xl font-bold leading-none">&times;</button>';
+  html += '<div class="font-extrabold text-orange-700 text-sm mb-1">Alerta de caducitat</div>';
+  alerts.forEach(a => {
+    if (a.days < 0) {
+      html += `<div class="text-sm"><span class="font-bold text-red-600">${escHtml(a.name)}</span> — CADUCAT fa ${Math.abs(a.days)} dies</div>`;
+    } else if (a.days === 0) {
+      html += `<div class="text-sm"><span class="font-bold text-red-600">${escHtml(a.name)}</span> — Caduca AVUI</div>`;
+    } else {
+      html += `<div class="text-sm"><span class="font-bold text-orange-700">${escHtml(a.name)}</span> — ${a.days} dies</div>`;
+    }
+  });
+  html += '</div>';
+  document.getElementById('summaryBar').insertAdjacentHTML('afterend', html);
+}
+
+function dismissExpiryAlert() {
+  const el = document.getElementById('expiryAlert');
+  if (el) el.remove();
+  sessionStorage.setItem('expiryAlertDismissed', '1');
+}
+
+// --- HISTORY ---
+function showHistory() {
+  const log = JSON.parse(localStorage.getItem(LOG_KEY) || '[]');
+  const list = document.getElementById('historyList');
+  if (log.length === 0) {
+    list.innerHTML = '<p class="text-center text-gray-400 py-8">Encara no hi ha moviments</p>';
+  } else {
+    list.innerHTML = log.map(e => {
+      const d = new Date(e.ts);
+      const time = d.toLocaleDateString('ca', {day:'2-digit',month:'2-digit'}) + ' ' + d.toLocaleTimeString('ca', {hour:'2-digit',minute:'2-digit'});
+      const delta = e.delta > 0 ? `+${e.delta}` : `${e.delta}`;
+      const color = e.delta > 0 ? 'text-green-600' : e.delta < 0 ? 'text-red-600' : 'text-gray-500';
+      const icon = e.action === 'entrada' ? '📥' : e.action === 'sortida' ? '📤' : e.action === 'eliminat' ? '🗑️' : e.action === 'nou' ? '🆕' : '📝';
+      const badge = e.method === 'veu' ? ' <span class="text-xs bg-purple-100 text-purple-700 px-1.5 rounded-full font-bold">veu</span>' : '';
+      return `<div class="flex items-center gap-2 py-2 border-b border-gray-100">
+        <span class="text-lg">${icon}</span>
+        <div class="flex-1 min-w-0">
+          <div class="font-bold text-sm truncate">${escHtml(e.product)}</div>
+          <div class="text-xs text-gray-400">${time}${badge}</div>
+        </div>
+        <div class="text-right">
+          <span class="font-extrabold ${color}">${delta}</span>
+          <div class="text-xs text-gray-400">${e.qtyAfter ?? ''} un.</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('historyModal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeHistory() {
+  document.getElementById('historyModal').classList.add('hidden');
+  document.body.style.overflow = '';
+}
 
 // --- INIT ---
 document.addEventListener('DOMContentLoaded', () => {
   loadProducts();
   renderProducts();
+  checkExpiryAlerts();
 });
 
 // ==========================================
@@ -663,9 +788,10 @@ const CATALAN_MONTHS = {
 const CATEGORIES = ['Alimentació','Cosmètica','Suplements','Infusions','Higiene','Altres'];
 const CATEGORY_KEYWORDS = {
   'alimentació':'Alimentació','alimentacio':'Alimentació','menjar':'Alimentació',
+  'xocolata':'Alimentació','mel':'Alimentació','pa':'Alimentació','arròs':'Alimentació','arros':'Alimentació','farina':'Alimentació','oli':'Alimentació',
   'cosmètica':'Cosmètica','cosmetica':'Cosmètica','crema':'Cosmètica',
   'suplements':'Suplements','suplement':'Suplements','vitamina':'Suplements',
-  'infusions':'Infusions','infusió':'Infusions','infusio':'Infusions','te':'Infusions',
+  'infusions':'Infusions','infusió':'Infusions','infusio':'Infusions','te':'Infusions','camamilla':'Infusions',
   'higiene':'Higiene','sabó':'Higiene','sabo':'Higiene',
   'altres':'Altres'
 };
@@ -679,58 +805,60 @@ function initVoice() {
   voiceSpeechSupported = true;
   recognition = new SpeechRecognition();
   recognition.lang = 'ca-ES';
-  recognition.continuous = false;
+  recognition.continuous = true;
   recognition.interimResults = true;
   recognition.maxAlternatives = 1;
 
+  let accumulatedFinal = '';
+  let currentInterim = '';
+  let silenceTimer = null;
+  let maxSessionTimer = null;
+
+  function clearVoiceTimers() {
+    clearTimeout(silenceTimer);
+    clearTimeout(maxSessionTimer);
+  }
+
+  function resetSilenceTimer() {
+    clearTimeout(silenceTimer);
+    silenceTimer = setTimeout(() => {
+      if (voiceState === VoiceState.LISTENING) {
+        try { recognition.stop(); } catch(e) {}
+      }
+    }, 4000);
+  }
+
   recognition.onstart = () => {
+    accumulatedFinal = '';
+    currentInterim = '';
     setVoiceState(VoiceState.LISTENING);
+    resetSilenceTimer();
+    clearTimeout(maxSessionTimer);
+    maxSessionTimer = setTimeout(() => {
+      if (voiceState === VoiceState.LISTENING) {
+        try { recognition.stop(); } catch(e) {}
+      }
+    }, 30000);
   };
 
-  let lastInterim = '';
-  let interimTimeout = null;
-
   recognition.onresult = (event) => {
-    let interim = '';
-    let final = '';
+    accumulatedFinal = '';
+    currentInterim = '';
     for (let i = 0; i < event.results.length; i++) {
+      const transcript = event.results[i][0].transcript;
       if (event.results[i].isFinal) {
-        final += event.results[i][0].transcript;
+        accumulatedFinal += transcript + ' ';
       } else {
-        interim += event.results[i][0].transcript;
+        currentInterim += transcript;
       }
     }
-    const display = final || interim;
+    const display = (accumulatedFinal + currentInterim).trim();
     document.getElementById('voiceText').textContent = display;
-
-    if (final) {
-      clearTimeout(interimTimeout);
-      try { recognition.stop(); } catch(e) {}
-      try {
-        processVoiceCommand(final.trim().toLowerCase());
-      } catch(e) {
-        showVoiceError('Error processant: ' + e.message);
-      }
-    } else if (interim) {
-      lastInterim = interim;
-      // Fallback: if isFinal never fires, use interim after 4s of no new speech
-      clearTimeout(interimTimeout);
-      interimTimeout = setTimeout(() => {
-        if (voiceState === VoiceState.LISTENING && lastInterim) {
-          try { recognition.stop(); } catch(e) {}
-          try {
-            processVoiceCommand(lastInterim.trim().toLowerCase());
-          } catch(e) {
-            showVoiceError('Error processant: ' + e.message);
-          }
-          lastInterim = '';
-        }
-      }, 4000);
-    }
+    resetSilenceTimer();
   };
 
   recognition.onerror = (event) => {
-    clearTimeout(interimTimeout);
+    clearVoiceTimers();
     if (event.error === 'not-allowed') {
       showVoiceError('Permís de micròfon denegat. Activa\'l a la configuració del navegador.');
     } else if (event.error === 'no-speech') {
@@ -744,20 +872,22 @@ function initVoice() {
   };
 
   recognition.onend = () => {
-    // If we're still in LISTENING state (no result processed), use last interim
-    if (voiceState === VoiceState.LISTENING) {
-      clearTimeout(interimTimeout);
-      if (lastInterim) {
-        try {
-          processVoiceCommand(lastInterim.trim().toLowerCase());
-        } catch(e) {
-          showVoiceError('Error processant: ' + e.message);
-        }
-        lastInterim = '';
-      } else {
-        setVoiceState(VoiceState.IDLE);
-        hideVoiceOverlay();
+    clearVoiceTimers();
+    const fullText = (accumulatedFinal + currentInterim).trim();
+    accumulatedFinal = '';
+    currentInterim = '';
+
+    if (voiceState !== VoiceState.LISTENING) return;
+
+    if (fullText) {
+      try {
+        processVoiceCommand(fullText.toLowerCase());
+      } catch(e) {
+        showVoiceError('Error processant: ' + e.message);
       }
+    } else {
+      setVoiceState(VoiceState.IDLE);
+      hideVoiceOverlay();
     }
   };
 }
@@ -768,9 +898,8 @@ function toggleVoice() {
     return;
   }
   if (voiceState === VoiceState.LISTENING) {
-    recognition.stop();
-    setVoiceState(VoiceState.IDLE);
-    hideVoiceOverlay();
+    // Stop recognition — onend will process accumulated text
+    try { recognition.stop(); } catch(e) {}
   } else if (voiceState === VoiceState.IDLE) {
     startListening();
   }
@@ -846,134 +975,188 @@ function showVoiceSuccess(msg) {
   setTimeout(() => { setVoiceState(VoiceState.IDLE); hideVoiceOverlay(); }, 2000);
 }
 
-// Safety timeout: never leave overlay hanging more than 8 seconds
-let overlayTimeout = null;
-const originalShowOverlay = showVoiceOverlay;
-showVoiceOverlay = function() {
-  originalShowOverlay();
-  clearTimeout(overlayTimeout);
-  overlayTimeout = setTimeout(() => {
-    if (voiceState !== VoiceState.IDLE) {
-      try { recognition.stop(); } catch(e) {}
-      setVoiceState(VoiceState.IDLE);
-      hideVoiceOverlay();
-    }
-  }, 8000);
-};
 
 // --- PARSING ---
+
+// Normalize speech-to-text variations before parsing
+function normalizeVoiceText(text) {
+  let t = text.toLowerCase().trim();
+  t = t.replace(/\s+/g, ' ');
+  // "vint i tres" → "vint-i-tres"
+  t = t.replace(/\bvint\s+i\s+(un|una|dos|dues|tres|quatre|cinc|sis|set|vuit|nou)\b/g, 'vint-i-$1');
+  // "trenta-i-cinc" → "trenta-cinc" (remove spurious -i- for 30+)
+  t = t.replace(/\b(trenta|quaranta|cinquanta|seixanta|setanta|vuitanta|noranta)-i-(un|una|dos|dues|tres|quatre|cinc|sis|set|vuit|nou)\b/g, '$1-$2');
+  // "trenta cinc" or "trenta i cinc" → "trenta-cinc"
+  t = t.replace(/\b(trenta|quaranta|cinquanta|seixanta|setanta|vuitanta|noranta)\s+i?\s*(un|una|dos|dues|tres|quatre|cinc|sis|set|vuit|nou)\b/g, '$1-$2');
+  // "cinc cents" → "cinc-cents"
+  t = t.replace(/\b(dos|tres|quatre|cinc|sis|set|vuit|nou)\s+cents?\b/g, '$1-cents');
+  // Contractions: "vintitrès" → "vint-i-tres"
+  t = t.replace(/\bvinti(\w+)/g, 'vint-i-$1');
+  // Strip accents from number-word positions (très → tres, sis → sis)
+  t = t.replace(/\bvint-i-(\w+)/g, (m, p1) => 'vint-i-' + p1.normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
+  return t;
+}
+
+const WEIGHT_UNITS_RE = /^(?:grams?|quilos?|quilograms?|litres?|mil[·.]?lilitres?|millilitres?|kg|g|ml|l|cl)$/i;
+
 function parseNumberWord(text) {
-  // Try direct digit match first
-  const digitMatch = text.match(/\d+/);
-  if (digitMatch) return parseInt(digitMatch[0]);
+  if (!text) return null;
+  let t = text.toLowerCase().trim();
 
-  // Normalize text for number matching
-  const normalized = text.toLowerCase().trim();
+  // Direct digit
+  if (/^\d+$/.test(t)) return parseInt(t);
 
-  // Try compound numbers like "trenta-cinc" or "trenta cinc"
-  // Pattern: tens + (- or space + i + space or -i-) + units
-  const compoundPattern = /\b(trenta|quaranta|cinquanta|seixanta|setanta|vuitanta|noranta)[\s-]+i[\s-]+(un|una|dos|dues|tres|quatre|cinc|sis|set|vuit|nou)\b/;
-  const compoundMatch = normalized.match(compoundPattern);
+  // Normalize hyphens/spaces for number matching
+  t = normalizeVoiceText(t);
+
+  // Direct dictionary lookup
+  if (CATALAN_NUMBERS[t] !== undefined) return CATALAN_NUMBERS[t];
+
+  // "dos mil X" → 2000 + X
+  const dosMilMatch = t.match(/^dos\s+mil\s*(.*)$/);
+  if (dosMilMatch) {
+    const rest = dosMilMatch[1].trim();
+    if (!rest) return 2000;
+    const restNum = parseNumberWord(rest);
+    return restNum !== null ? 2000 + restNum : 2000;
+  }
+
+  // "mil X" → 1000 + X
+  if (/^mil\b/.test(t)) {
+    const rest = t.substring(3).trim();
+    if (!rest) return 1000;
+    const restNum = parseNumberWord(rest);
+    return restNum !== null ? 1000 + restNum : 1000;
+  }
+
+  // "cent X" → 100 + X
+  if (/^cent\b/.test(t)) {
+    const rest = t.substring(4).trim();
+    if (!rest) return 100;
+    const restNum = parseNumberWord(rest);
+    return restNum !== null ? 100 + restNum : 100;
+  }
+
+  // Compound with one hyphen: "trenta-cinc" → 30 + 5
+  const compoundMatch = t.match(/^(\w+)-(\w+)$/);
   if (compoundMatch) {
-    const tens = CATALAN_NUMBERS[compoundMatch[1]] || 0;
-    const units = CATALAN_NUMBERS[compoundMatch[2]] || 0;
-    return tens + units;
+    const a = CATALAN_NUMBERS[compoundMatch[1]];
+    const b = CATALAN_NUMBERS[compoundMatch[2]];
+    if (a !== undefined && b !== undefined) return a + b;
   }
 
-  // Try vint-i-X pattern (already in dictionary)
-  for (const [word, num] of Object.entries(CATALAN_NUMBERS)) {
-    if (normalized.includes(word)) return num;
+  // Fallback: longest matching dictionary entry with word boundaries
+  const sortedEntries = Object.entries(CATALAN_NUMBERS).sort((a, b) => b[0].length - a[0].length);
+  for (const [word, num] of sortedEntries) {
+    const escaped = word.replace(/[-]/g, '[-\\s]').replace(/\s+/g, '\\s+');
+    const re = new RegExp('(?:^|\\s)' + escaped + '(?:\\s|$)');
+    if (re.test(t)) return num;
   }
+
+  // Last resort: extract embedded digit
+  const anyDigit = t.match(/\b(\d+)\b/);
+  if (anyDigit) return parseInt(anyDigit[1]);
 
   return null;
 }
 
 function extractQuantity(text) {
-  // Define quantityZone first - text before expiry keywords to avoid confusing date numbers
-  let quantityZone = text;
-  const caducaMatch = text.match(/\b(?:caduca|caduqui|caducitat)\b/);
-  if (caducaMatch) quantityZone = text.substring(0, caducaMatch.index);
+  // Zone before expiry keywords to avoid confusing date numbers with quantity
+  let zone = text;
+  const caducaIdx = text.search(/\b(?:que\s+)?(?:caduca|caduqui|de\s+caducitat|caducitat)\b/i);
+  if (caducaIdx > 0) zone = text.substring(0, caducaIdx);
 
-  // Remove weight measures from quantityZone so "cinc-cents grams" isn't read as qty 500
-  let qzClean = quantityZone.replace(/\b\d+\s*(?:g|kg|ml|l|cl|grams?|litres?|quilos?)\b/gi, '');
-  // Also remove Catalan number words followed by weight words
-  const weightWords = /(?:cinc-cents|quatre-cents|tres-cents|dos-cents|cent|mil)\s+(?:grams?|quilos?|litres?|mil·lilitres?)\b/gi;
-  qzClean = qzClean.replace(weightWords, '');
+  // Remove digit-based weight measures
+  let clean = zone.replace(/\b\d+\s*(?:grams?|quilos?|quilograms?|litres?|mil[·.]?lilitres?|millilitres?|kg|g|ml|l|cl)\b/gi, '');
 
-  // Check for "una"/"un" as quantity word early (common in speech)
-  if (/\buna\b/i.test(qzClean) || /^(?:afegeix|treu|actualitza)\s+un\b/i.test(text)) return 1;
-
-  // Look for explicit quantity patterns (number + "unitats"/"unitat")
-  const explicitQty = qzClean.match(/(\d+)\s*unitat/i);
-  if (explicitQty) return parseInt(explicitQty[1]);
-
-  // Look for standalone numbers NOT followed by weight units
-  const standaloneNum = qzClean.match(/\b(\d+)\b(?!\s*(?:g|kg|ml|l|cl|grams?)\b)/i);
-  if (standaloneNum) return parseInt(standaloneNum[1]);
-
-  // Try Catalan number words + "unitat(s)"
-  const unitatPattern = /([\w\s-]+?)\s*unitat/i;
-  const um = qzClean.match(unitatPattern);
-  if (um) {
-    const num = parseNumberWord(um[1]);
-    if (num !== null) return num;
+  // Remove ALL Catalan number words followed by weight units (not just hundreds)
+  const weightUnitPat = '(?:grams?|quilos?|quilograms?|litres?|mil[·.]?lilitres?|millilitres?|kg|g|ml|l|cl)';
+  const allNumWords = Object.keys(CATALAN_NUMBERS).sort((a, b) => b.length - a.length);
+  for (const nw of allNumWords) {
+    const escaped = nw.replace(/[-]/g, '[-\\s]').replace(/\s+/g, '\\s+');
+    const re = new RegExp('\\b' + escaped + '\\s+' + weightUnitPat + '\\b', 'gi');
+    clean = clean.replace(re, '');
   }
 
-  // Try any Catalan number word (longest first to match compound numbers first)
-  const sortedEntries = Object.entries(CATALAN_NUMBERS).sort((a, b) => b[0].length - a[0].length);
-  for (const [word, num] of sortedEntries) {
-    if (qzClean.includes(word) && num > 0) return num;
+  // "a X unitats" pattern (e.g. "actualitza vitamina c a deu unitats")
+  const aUnitatMatch = clean.match(/\ba\s+([\w][\w\s-]*?)\s+unitats?\b/i);
+  if (aUnitatMatch) {
+    const n = parseNumberWord(aUnitatMatch[1]);
+    if (n !== null) return n;
   }
 
-  return 1; // default
-}
+  // Catalan number word + unitats
+  const unitatMatch = clean.match(/([\w][\w\s-]*?)\s+unitats?\b/i);
+  if (unitatMatch) {
+    const n = parseNumberWord(unitatMatch[1]);
+    if (n !== null) return n;
+  }
 
-function extractExpiry(text) {
-  // Look for "caduca el X de Y" or "caducitat X de Y"
-  const expiryPattern = /(?:que\s+)?(?:caduca|caduqui|caducitat)\s+(?:el\s+|l')?(.+)/i;
-  const m = text.match(expiryPattern);
-  if (!m) return '';
+  // Digit + unitats
+  const digitUnitat = clean.match(/(\d+)\s*unitats?\b/i);
+  if (digitUnitat) return parseInt(digitUnitat[1]);
 
-  const datePart = m[1].trim();
-  return parseCatalanDate(datePart);
-}
+  // "una"/"un" as quantity
+  if (/\buna\b/i.test(clean)) return 1;
+  if (/^(?:afegeix|afegir|treu|actualitza)\s+un\b/i.test(text)) return 1;
 
-function parseCatalanDate(text) {
-  let day = null;
-  let month = null;
-  let year = null;
+  // Standalone digit NOT before weight unit
+  const digit = clean.match(/\b(\d+)\b(?!\s*(?:grams?|quilos?|kg|g|ml|l|cl)\b)/i);
+  if (digit) return parseInt(digit[1]);
 
-  // Extract day (number or word)
-  const dayDigit = text.match(/^(\d{1,2})/);
-  if (dayDigit) {
-    day = parseInt(dayDigit[1]);
-  } else {
-    // Try number words for day
-    const sortedEntries = Object.entries(CATALAN_NUMBERS).sort((a, b) => b[0].length - a[0].length);
-    for (const [word, num] of sortedEntries) {
-      if (text.startsWith(word) || text.includes(word)) {
-        if (num >= 1 && num <= 31) { day = num; break; }
-      }
+  // Leading number word after action — only if NOT followed by a weight unit
+  const afterAction = clean.replace(/^(?:afegeix|afegir|treu|actualitza)\s+(?:una?\s+)?/i, '').trim();
+  const leadingMatch = afterAction.match(/^([\w]+(?:-[\w]+)*)\b/);
+  if (leadingMatch) {
+    const candidate = leadingMatch[1];
+    const rest = afterAction.substring(candidate.length).trim();
+    const nextWord = (rest.match(/^(\S+)/) || [])[1] || '';
+    if (!WEIGHT_UNITS_RE.test(nextWord)) {
+      const n = parseNumberWord(candidate);
+      if (n !== null && n > 0 && n <= 99) return n;
     }
   }
 
-  // Extract month
+  return 1;
+}
+
+function extractExpiry(text) {
+  const expiryPattern = /(?:que\s+)?(?:caduca|caduqui|de\s+caducitat|caducitat)\s+(?:el\s+|l')?(.+)/i;
+  const m = text.match(expiryPattern);
+  if (!m) return '';
+  return parseCatalanDate(m[1].trim());
+}
+
+function parseCatalanDate(text) {
+  let day = null, month = null, year = null;
+
+  // Find month FIRST to anchor day/year extraction
+  let monthPos = -1;
   for (const [monthName, monthNum] of Object.entries(CATALAN_MONTHS)) {
-    if (text.includes(monthName)) { month = monthNum; break; }
+    const idx = text.indexOf(monthName);
+    if (idx !== -1) { month = monthNum; monthPos = idx; break; }
   }
+  if (!month) return '';
 
-  if (!day || !month) return '';
+  // Extract day from text BEFORE the month (avoids grabbing year numbers)
+  const beforeMonth = text.substring(0, monthPos).replace(/\s+de?\s*$/i, '').replace(/\s+d['']?\s*$/i, '').trim();
+  const dayDigit = beforeMonth.match(/(\d{1,2})/);
+  if (dayDigit) {
+    day = parseInt(dayDigit[1]);
+  } else if (beforeMonth) {
+    day = parseNumberWord(beforeMonth);
+  }
+  if (!day || day < 1 || day > 31) return '';
 
-  // Extract year
-  const yearDigit = text.match(/\b(20\d{2})\b/);
+  // Extract year from text AFTER the month
+  const afterMonth = text.substring(monthPos);
+  const yearDigit = afterMonth.match(/\b(20\d{2})\b/);
   if (yearDigit) {
     year = parseInt(yearDigit[1]);
   } else {
-    // Try "dos mil vint-i-set" or "del dos mil vint-i-set" style years
-    const yearPattern = /(?:del?\s+)?(?:dos\s*mil\s*)([\w\s-]+)/;
-    const ym = text.match(yearPattern);
+    const ym = afterMonth.match(/(?:del?\s+)?dos\s+mil\s+([\w\s-]+)/i);
     if (ym) {
-      const yearRest = parseNumberWord(ym[1]);
+      const yearRest = parseNumberWord(ym[1].trim());
       if (yearRest !== null) year = 2000 + yearRest;
     }
   }
@@ -981,74 +1164,77 @@ function parseCatalanDate(text) {
   if (!year) {
     const now = new Date();
     year = now.getFullYear();
-    // If month already passed, use next year
     const testDate = new Date(year, month - 1, day);
     if (testDate < now) year++;
   }
 
-  const mm = String(month).padStart(2, '0');
-  const dd = String(day).padStart(2, '0');
-  return `${year}-${mm}-${dd}`;
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
 function extractCategory(text) {
   const lower = text.toLowerCase();
-  // Check category keywords
   for (const [keyword, cat] of Object.entries(CATEGORY_KEYWORDS)) {
-    if (lower.includes(keyword)) return cat;
+    const re = new RegExp('\\b' + keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+    if (re.test(lower)) return cat;
   }
   return '';
 }
 
 function extractAction(text) {
-  if (text.startsWith('treu') || text.includes(' treu ')) return 'remove';
-  if (text.startsWith('actualitza') || text.includes(' actualitza ')) return 'update';
-  // Default to add (covers "afegeix" and bare commands)
+  if (/\b(?:treu|treure)\b/.test(text)) return 'remove';
+  if (/\b(?:actualitza|actualitzar)\b/.test(text)) return 'update';
   return 'add';
 }
 
 function extractProductName(text) {
   let cleaned = text;
 
-  // Remove action words at the start (including "afegeix una", "afegeix un")
-  cleaned = cleaned.replace(/^(afegeix|actualitza|treu)\s+(una?\s+)?/i, '');
+  // Remove action words at the start
+  cleaned = cleaned.replace(/^(afegeix|afegir|afegei|actualitza|actualitzar|treu|treure)\s+/i, '');
 
-  // Remove quantity phrases (number + unitats/unitat) but NOT numbers followed by g/kg/ml
+  // Remove leading "una"/"un"
+  cleaned = cleaned.replace(/^una?\s+/i, '');
+
+  // Remove leading quantity number word — but NOT if followed by a weight unit
+  const leadingNumMatch = cleaned.match(/^([\w]+(?:-[\w]+)*)\s+/);
+  if (leadingNumMatch) {
+    const candidate = leadingNumMatch[1];
+    const afterNum = cleaned.substring(leadingNumMatch[0].length);
+    const nextWord = (afterNum.match(/^(\S+)/) || [])[1] || '';
+    const isNum = parseNumberWord(candidate);
+    if (isNum !== null && !WEIGHT_UNITS_RE.test(nextWord)) {
+      cleaned = afterNum;
+    }
+  }
+
+  // Remove "a X unitats" pattern
+  cleaned = cleaned.replace(/\ba\s+[\w-]+\s+unitats?\b/gi, '');
+  // Remove "X unitats" (digits)
   cleaned = cleaned.replace(/\b\d+\s*unitats?\b/gi, '');
-  // Remove Catalan number words followed by "unitat(s)"
+  // Remove Catalan number word + unitats
   const sortedNums = Object.keys(CATALAN_NUMBERS).sort((a, b) => b.length - a.length);
   for (const word of sortedNums) {
-    const re = new RegExp('\\b' + word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s+unitats?\\b', 'gi');
+    const escaped = word.replace(/[-]/g, '[-\\s]').replace(/\s+/g, '\\s+');
+    const re = new RegExp('\\b' + escaped + '\\s+unitats?\\b', 'gi');
     cleaned = cleaned.replace(re, '');
   }
 
-  // Remove expiry phrases (with optional "que" before, and "caduqui" variant)
-  cleaned = cleaned.replace(/(?:que\s+)?(?:caduca|caduqui|caducitat)\s+.*/i, '');
+  // Remove expiry phrases
+  cleaned = cleaned.replace(/(?:que\s+)?(?:caduca|caduqui|de\s+caducitat|caducitat)\s+.*/i, '');
 
   // Remove category mentions at the end
   cleaned = cleaned.replace(/\s+(?:categoria|de la categoria)\s+\w+\s*$/i, '');
 
-  // Remove standalone number words that are likely quantities (only if they appear right before a comma or at a natural boundary)
-  // Be careful not to remove numbers that are part of the product name
+  // Clean up
   cleaned = cleaned.replace(/,\s*\d+\s*/g, ',');
-  cleaned = cleaned.replace(/,\s*$/g, '');
-
-  // Remove trailing commas, clean up
   cleaned = cleaned.replace(/\s+/g, ' ').trim();
   cleaned = cleaned.replace(/^[,\s]+|[,\s]+$/g, '').trim();
 
-  // Remove leading standalone quantity number words if they appear at the start after action removal
-  // e.g., "deu unitats" was removed but "deu" alone at start might remain
-  // Only remove if what follows looks like it continues
-  for (const word of sortedNums) {
-    const re = new RegExp('^' + word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*,?\\s*', 'i');
-    if (cleaned.match(re) && cleaned.length > word.length + 2) {
-      cleaned = cleaned.replace(re, '');
-      break;
-    }
-  }
+  // Remove orphan trailing prepositions/articles
+  cleaned = cleaned.replace(/\s+(de|del|de la|de les|a|al|el|la|les|els|un|una|uns|unes)\s*$/i, '').trim();
+  // Remove orphan leading articles
+  cleaned = cleaned.replace(/^(el|la|les|els)\s+/i, '').trim();
 
-  cleaned = cleaned.replace(/^[,\s]+|[,\s]+$/g, '').trim();
   return cleaned;
 }
 
@@ -1088,6 +1274,7 @@ function findExistingProduct(name) {
 }
 
 function processVoiceCommand(text) {
+  text = normalizeVoiceText(text);
   setVoiceState(VoiceState.PROCESSING);
   document.getElementById('voiceStatus').textContent = 'Processant...';
   document.getElementById('voiceStatus').style.color = '#a78bfa';
@@ -1118,7 +1305,9 @@ function processVoiceCommand(text) {
 
   if (action === 'remove') {
     if (existing) {
+      const oldQty = existing.quantity;
       existing.quantity = Math.max(0, existing.quantity - quantity);
+      logMovement(existing.name, 'sortida', oldQty, existing.quantity, 'veu');
       saveToStorage();
       renderProducts();
       confirmMsg = 'Tret: ' + existing.name + ', ' + quantity + ' unitat' + (quantity !== 1 ? 's' : '') + '. Queden ' + existing.quantity;
@@ -1129,9 +1318,11 @@ function processVoiceCommand(text) {
     }
   } else if (action === 'update') {
     if (existing) {
+      const oldQty = existing.quantity;
       existing.quantity = quantity;
       if (expiry) existing.expiry = expiry;
       if (category) existing.category = category;
+      logMovement(existing.name, 'ajust', oldQty, existing.quantity, 'veu');
       saveToStorage();
       renderProducts();
       confirmMsg = 'Actualitzat: ' + existing.name + ' a ' + quantity + ' unitat' + (quantity !== 1 ? 's' : '');
@@ -1143,8 +1334,10 @@ function processVoiceCommand(text) {
   } else {
     // Add
     if (existing) {
+      const oldQty = existing.quantity;
       existing.quantity += quantity;
       if (expiry && !existing.expiry) existing.expiry = expiry;
+      logMovement(existing.name, 'entrada', oldQty, existing.quantity, 'veu');
       saveToStorage();
       renderProducts();
       confirmMsg = 'Afegit: ' + existing.name + ' +' + quantity + ' (total: ' + existing.quantity + ')';
@@ -1160,6 +1353,7 @@ function processVoiceCommand(text) {
         priceSell: 0,
       };
       products.push(newProduct);
+      logMovement(newProduct.name, 'nou', 0, quantity, 'veu');
       saveToStorage();
       renderProducts();
       confirmMsg = 'Afegit: ' + newProduct.name + ' - ' + quantity + ' unitat' + (quantity !== 1 ? 's' : '');
@@ -1170,6 +1364,58 @@ function processVoiceCommand(text) {
   // Speech synthesis confirmation
   speakCatalan(confirmMsg);
   showVoiceSuccess(confirmMsg);
+}
+
+// --- TEMPORARY TEST FUNCTION (delete after validation) ---
+function testVoiceParsing() {
+  const tests = [
+    { input: "afegeix una barra de xocolata de cinc-cents grams que caduqui el vint-i-tres de març del dos mil vint-i-vuit",
+      expected: { action: 'add', product: 'barra de xocolata de cinc-cents grams', qty: 1, expiry: '2028-03-23' } },
+    { input: "afegeix tres paquets de te verd que caduca el quinze de juny",
+      expected: { action: 'add', product: 'paquets de te verd', qty: 3 } },
+    { input: "treu dos crema hidratant",
+      expected: { action: 'remove', product: 'crema hidratant', qty: 2 } },
+    { input: "actualitza vitamina c a deu unitats",
+      expected: { action: 'update', product: 'vitamina c', qty: 10 } },
+    { input: "sabó de lavanda caducitat tretze de setembre del dos mil vint-i-sis",
+      expected: { action: 'add', product: 'sabó de lavanda', qty: 1, expiry: '2026-09-13' } },
+    { input: "afegeix cinc quilos de mel",
+      expected: { action: 'add', product: 'cinc quilos de mel', qty: 1 } },
+    { input: "dos pots d'infusió de camamilla",
+      expected: { action: 'add', product: "pots d'infusió de camamilla", qty: 2 } },
+    { input: "barra de xocolata de cinc-cents grams que caduqui el vint-i-tres de març del dos mil vint-i-vuit",
+      expected: { action: 'add', product: 'barra de xocolata de cinc-cents grams', qty: 1, expiry: '2028-03-23' } },
+    // Speech-to-text variations
+    { input: "afegeix una barra de xocolata de cinc cents grams que caduqui el vint i tres de març del dos mil vint i vuit",
+      expected: { action: 'add', product: 'barra de xocolata de cinc-cents grams', qty: 1, expiry: '2028-03-23' } },
+    { input: "afegeix tres paquets de te verd que caduca el 15 de juny",
+      expected: { action: 'add', product: 'paquets de te verd', qty: 3, expiry_day: 15, expiry_month: 6 } },
+  ];
+
+  let pass = 0, fail = 0;
+  for (const t of tests) {
+    const text = normalizeVoiceText(t.input.toLowerCase());
+    const action = extractAction(text);
+    const qty = extractQuantity(text);
+    const expiry = extractExpiry(text);
+    const product = extractProductName(text);
+    const errors = [];
+
+    if (t.expected.action && action !== t.expected.action) errors.push(`action: got "${action}" expected "${t.expected.action}"`);
+    if (t.expected.product && product !== t.expected.product) errors.push(`product: got "${product}" expected "${t.expected.product}"`);
+    if (t.expected.qty && qty !== t.expected.qty) errors.push(`qty: got ${qty} expected ${t.expected.qty}`);
+    if (t.expected.expiry && expiry !== t.expected.expiry) errors.push(`expiry: got "${expiry}" expected "${t.expected.expiry}"`);
+    if (t.expected.expiry_day && expiry) {
+      const d = parseInt(expiry.split('-')[2]); if (d !== t.expected.expiry_day) errors.push(`expiry day: got ${d} expected ${t.expected.expiry_day}`);
+    }
+    if (t.expected.expiry_month && expiry) {
+      const m = parseInt(expiry.split('-')[1]); if (m !== t.expected.expiry_month) errors.push(`expiry month: got ${m} expected ${t.expected.expiry_month}`);
+    }
+
+    if (errors.length === 0) { pass++; console.log(`✓ "${t.input.substring(0,50)}..."`); }
+    else { fail++; console.error(`✗ "${t.input.substring(0,50)}..." → ${errors.join(', ')}`); }
+  }
+  console.log(`\nResults: ${pass}/${pass+fail} passed${fail > 0 ? ` (${fail} FAILED)` : ' — ALL PASS'}`);
 }
 
 function speakCatalan(text) {
