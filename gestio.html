@@ -1097,6 +1097,9 @@ const STT_CORRECTIONS = {
   // === Qualitats ===
   'ecologica':'ecològica','ecologico':'ecològic','biologica':'biològica','bio':'bio',
   'integral':'integral','organica':'orgànica','organico':'orgànic',
+  'verde':'verd','verdes':'verds',
+  'esencia':'essència','esencial':'essencial',
+  'essent fià':'essència','essent cia':'essència',
   // === Unitats ===
   'kilo':'quilo','kilos':'quilos','kilogramos':'quilograms',
   'gramo':'grams','gramos':'grams',
@@ -1402,7 +1405,8 @@ function extractProductName(text) {
 
 const FUZZY_STOP_WORDS = new Set([
   'de','del','da','la','el','les','els','un','una','uns','unes',
-  'al','a','amb','per','i','o','en','que','com','ses','sa'
+  'al','a','amb','per','i','o','en','que','com','ses','sa',
+  'si','ni','ja','ho','hi','no','be','va','ha'
 ]);
 const FUZZY_WEIGHT_WORDS = new Set([
   'grams','gram','quilos','quilo','quilograms','quilogram',
@@ -1415,7 +1419,7 @@ function getSignificantWords(text) {
     // Strip apostrophe contractions: d'oliva → oliva, l'arròs → arròs
     return w.replace(/^[dln]'/, '');
   }).filter(w => {
-    if (w.length <= 2) return false;
+    if (w.length <= 1) return false;
     if (FUZZY_STOP_WORDS.has(w)) return false;
     if (FUZZY_WEIGHT_WORDS.has(w)) return false;
     if (/^\w+-cents$/.test(w)) return false;
