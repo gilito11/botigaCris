@@ -814,6 +814,7 @@ const CATEGORY_KEYWORDS = {
   'suplements':'Suplements','suplement':'Suplements','vitamina':'Suplements',
   'infusions':'Infusions','infusió':'Infusions','infusio':'Infusions','te':'Infusions','camamilla':'Infusions',
   'higiene':'Higiene','sabó':'Higiene','sabo':'Higiene',
+  'vaixelles':'Neteja','rentavaixelles':'Neteja','renta vaixelles':'Neteja','detergent':'Neteja','lleixiu':'Neteja','pastilla':'Neteja',
   'altres':'Altres'
 };
 
@@ -1016,6 +1017,11 @@ const STT_CORRECTIONS = {
   'holi':'oli','holiva':'oliva',
   'harròs':'arròs','harros':'arròs',
   'ecologica':'ecològica','ecologico':'ecològic','biologica':'biològica','bio':'bio',
+  // Household
+  'baixelles':'vaixelles','beixelles':'vaixelles','vaixeles':'vaixelles',
+  'rentavaixelles':'renta vaixelles','rentabaixelles':'renta vaixelles',
+  'pastilles':'pastilla','pastiya':'pastilla',
+  'deterjent':'detergent','detergen':'detergent',
 };
 
 function normalizeVoiceText(text) {
@@ -1264,6 +1270,16 @@ function extractProductName(text) {
     cleaned = cleaned.replace(re, '');
   }
 
+  // Remove digit-based weight measures (e.g., "500 grams", "200g")
+  cleaned = cleaned.replace(/\b\d+\s*(?:grams?|quilos?|quilograms?|litres?|mil[·.]?lilitres?|millilitres?|kg|g|ml|l|cl)\b/gi, '');
+
+  // Remove Catalan number word + weight unit (e.g., "quatre-cents grams", "cinc quilos")
+  const weightUnitPat = '(?:grams?|quilos?|quilograms?|litres?|mil[·.]?lilitres?|millilitres?|kg|g|ml|l|cl)';
+  for (const word of sortedNums) {
+    const esc = word.replace(/[-]/g, '[-\\s]').replace(/\s+/g, '\\s+');
+    cleaned = cleaned.replace(new RegExp('\\b' + esc + '\\s+' + weightUnitPat + '\\b', 'gi'), '');
+  }
+
   // Remove expiry phrases
   cleaned = cleaned.replace(/(?:que\s+)?(?:caduca|caduqui|caduque|data\s+de\s+caducitat|de\s+caducitat|caducitat)\s+.*/i, '');
 
@@ -1377,6 +1393,125 @@ function findExistingProduct(name) {
   return null;
 }
 
+function findMatchingProducts(name) {
+  if (!name) return [];
+  const lower = name.toLowerCase();
+
+  // 1) Exact match — definitive
+  const exact = products.find(p => p.name.toLowerCase() === lower);
+  if (exact) return [exact];
+
+  // 2) Contains match (min 6 chars)
+  const containsMatches = products.filter(p => {
+    const pLower = p.name.toLowerCase();
+    const shorter = lower.length <= pLower.length ? lower : pLower;
+    if (shorter.length < 6) return false;
+    return pLower.includes(lower) || lower.includes(pLower);
+  });
+  if (containsMatches.length > 0) return containsMatches;
+
+  // 3) Significant words + phonetic
+  const words = getSignificantWords(lower);
+  if (words.length === 0) return [];
+
+  const inputPhonetic = words.map(phoneticNorm);
+  const scored = [];
+
+  for (const p of products) {
+    const pWords = getSignificantWords(p.name);
+    if (pWords.length === 0) continue;
+    const pPhonetic = pWords.map(phoneticNorm);
+
+    let exactCount = 0;
+    for (const w of words) {
+      if (pWords.some(pw => pw === w || (pw.length >= 4 && w.length >= 4 && (pw.includes(w) || w.includes(pw))))) exactCount++;
+    }
+
+    let phoneticCount = 0;
+    for (const w of inputPhonetic) {
+      if (pPhonetic.some(pw => pw === w)) phoneticCount++;
+    }
+
+    const bestCount = Math.max(exactCount, phoneticCount);
+    const score = bestCount / Math.max(words.length, pWords.length);
+
+    if (words.length === 1 && bestCount >= 1) {
+      scored.push({ product: p, score });
+    } else if (bestCount >= 2 && score >= 0.5) {
+      scored.push({ product: p, score });
+    }
+  }
+
+  if (scored.length === 0) return [];
+  scored.sort((a, b) => b.score - a.score);
+  const bestScore = scored[0].score;
+  return scored.filter(s => s.score >= bestScore * 0.8).map(s => s.product);
+}
+
+let pendingVoiceChoices = null;
+
+function showVoiceChoices(matches, action, productName, quantity, expiry, category) {
+  pendingVoiceChoices = { matches, action, productName, quantity, expiry, category };
+
+  let html = '<div style="margin-top:8px;font-size:14px;color:#fbbf24">Diversos productes coincideixen:</div>';
+  matches.forEach((p, i) => {
+    html += '<button onclick="voiceSelectChoice(' + i + ')" style="display:block;width:100%;margin-top:6px;padding:10px 14px;background:#1e1b4b;border:2px solid #6366f1;border-radius:12px;color:white;font-size:15px;font-weight:bold;text-align:left;cursor:pointer">' + escHtml(p.name) + ' (' + p.quantity + ' un.)</button>';
+  });
+  html += '<button onclick="voiceSelectChoice(-1)" style="display:block;width:100%;margin-top:6px;padding:10px 14px;background:#1e1b4b;border:2px solid #4ade80;border-radius:12px;color:#4ade80;font-size:14px;font-weight:bold;text-align:left;cursor:pointer">+ Crear producte nou: &quot;' + escHtml(productName) + '&quot;</button>';
+
+  document.getElementById('voiceParsed').innerHTML = html;
+  document.getElementById('voiceStatus').textContent = 'Quin producte?';
+  document.getElementById('voiceStatus').style.color = '#fbbf24';
+  document.getElementById('voiceDots').style.display = 'none';
+  setVoiceState(VoiceState.PROCESSING);
+}
+
+function voiceSelectChoice(index) {
+  if (!pendingVoiceChoices) return;
+  const { matches, action, productName, quantity, expiry, category } = pendingVoiceChoices;
+  pendingVoiceChoices = null;
+
+  if (index === -1) {
+    openModalWithVoiceData(productName, category, quantity, expiry);
+    showVoiceSuccess('Revisa i guarda el producte');
+    showToast('Revisa i guarda el producte');
+    return;
+  }
+
+  const existing = matches[index];
+  let confirmMsg = '';
+
+  if (action === 'remove') {
+    const oldQty = existing.quantity;
+    existing.quantity = Math.max(0, existing.quantity - quantity);
+    logMovement(existing.name, 'sortida', oldQty, existing.quantity, 'veu');
+    saveToStorage();
+    renderProducts();
+    confirmMsg = 'Tret: ' + existing.name + ', ' + quantity + ' unitat' + (quantity !== 1 ? 's' : '') + '. Queden ' + existing.quantity;
+  } else if (action === 'update') {
+    const oldQty = existing.quantity;
+    existing.quantity = quantity;
+    if (expiry) existing.expiry = expiry;
+    if (category) existing.category = category;
+    logMovement(existing.name, 'ajust', oldQty, existing.quantity, 'veu');
+    saveToStorage();
+    renderProducts();
+    confirmMsg = 'Actualitzat: ' + existing.name + ' a ' + quantity + ' unitat' + (quantity !== 1 ? 's' : '');
+  } else {
+    const oldQty = existing.quantity;
+    existing.quantity += quantity;
+    if (expiry && !existing.expiry) existing.expiry = expiry;
+    logMovement(existing.name, 'entrada', oldQty, existing.quantity, 'veu');
+    saveToStorage();
+    renderProducts();
+    confirmMsg = '+' + quantity + ' ' + existing.name + ' (total: ' + existing.quantity + ')';
+  }
+
+  showToast(confirmMsg);
+  speakCatalan(confirmMsg);
+  showVoiceSuccess(confirmMsg);
+}
+
 function processVoiceCommand(text) {
   text = normalizeVoiceText(text);
   setVoiceState(VoiceState.PROCESSING);
@@ -1405,9 +1540,16 @@ function processVoiceCommand(text) {
   if (category) parsedInfo += ' &mdash; ' + category;
   document.getElementById('voiceParsed').innerHTML = parsedInfo;
 
-  const existing = findExistingProduct(productName);
-  console.log('[VOZ] match:', existing ? existing.name : 'CAP (nou producte)');
+  const matches = findMatchingProducts(productName);
+  console.log('[VOZ] matches:', matches.length, matches.map(p => p.name));
 
+  // Multiple matches — let user choose
+  if (matches.length > 1) {
+    showVoiceChoices(matches, action, productName, quantity, expiry, category);
+    return;
+  }
+
+  const existing = matches.length === 1 ? matches[0] : null;
   let confirmMsg = '';
 
   if (action === 'remove') {
@@ -1439,7 +1581,6 @@ function processVoiceCommand(text) {
       return;
     }
   } else {
-    // Add
     if (existing) {
       const oldQty = existing.quantity;
       existing.quantity += quantity;
@@ -1447,12 +1588,11 @@ function processVoiceCommand(text) {
       logMovement(existing.name, 'entrada', oldQty, existing.quantity, 'veu');
       saveToStorage();
       renderProducts();
-      confirmMsg = '📦 +' + quantity + ' ' + existing.name + ' (total: ' + existing.quantity + ')';
+      confirmMsg = '+' + quantity + ' ' + existing.name + ' (total: ' + existing.quantity + ')';
       showToast(confirmMsg);
     } else {
-      // NEW product: open form pre-filled so user can review/correct before saving
       openModalWithVoiceData(productName, category, quantity, expiry);
-      confirmMsg = '✏️ Revisa i guarda el producte';
+      confirmMsg = 'Revisa i guarda el producte';
       showToast(confirmMsg);
     }
   }
